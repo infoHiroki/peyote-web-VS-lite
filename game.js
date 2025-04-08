@@ -210,25 +210,20 @@ function create() {
     updateExpBar();
 }
 
-// 背景の作成 - 背景を一枚の大きい画像にしてゆっくり移動
+// 背景の作成 - 画面端に画像を配置
 function createBackground(scene) {
     try {
-        // 大きな背景画像を作成
-        const bg = scene.add.image(config.width / 2, config.height / 2, 'background');
+        // 背景画像を作成
+        const bg = scene.add.image(0, 0, 'background');
         bg.setDepth(0); // 最背面に配置
         
-        // 画像を画面全体に合わせて十分に大きく設定
-        const scaleX = (config.width / bg.width) * 3.0; // 画面の3.0倍の大きさに増加
-        const scaleY = (config.height / bg.height) * 3.0;
-        bg.setScale(Math.max(scaleX, scaleY));
+        // 画像を画面サイズにぴったり合わせる
+        const scaleX = config.width / bg.width;
+        const scaleY = config.height / bg.height;
+        bg.setScale(scaleX, scaleY);
         
-        // 初期位置を画面外に設定
-        const distance = Math.max(config.width, config.height) * 1.5;
-        backgroundAngle = Math.random() * Math.PI * 2; // ランダムな初期角度
-        const startX = config.width / 2 + Math.cos(backgroundAngle) * distance;
-        const startY = config.height / 2 + Math.sin(backgroundAngle) * distance;
-        bg.x = startX;
-        bg.y = startY;
+        // 左上を原点として配置
+        bg.setOrigin(0, 0);
         
         backgrounds = [bg]; // 背景は1つだけ
     } catch (e) {
@@ -315,40 +310,20 @@ function update(time, delta) {
     player.y = Phaser.Math.Clamp(player.y, 0, config.height);
 }
 
-// 背景のスクロール更新 - プレイヤーの動きと無関係に常に中央に向かって移動
+// 背景のスクロール更新 - 非常にゆっくりと移動
 function updateBackground(dt) {
     try {
         if (backgrounds.length === 0) return;
         
         const bg = backgrounds[0];
         
-        // 背景の角度をゆっくり変更して円を描くように移動
-        backgroundAngle += backgroundRotateSpeed * dt;
+        // 背景を非常にゆっくりと一定方向に動かす
+        bg.x -= 0.3 * dt; // 左方向にゆっくり移動
         
-        // 背景の位置を計算
-        const centerX = config.width / 2;
-        const centerY = config.height / 2;
-        const distance = Math.sqrt(
-            Math.pow(bg.x - centerX, 2) + 
-            Math.pow(bg.y - centerY, 2)
-        );
-        
-        // 常に中央に向かって移動
-        const moveSpeed = backgroundSpeed * dt * 100;
-        
-        if (distance > 5) {
-            // 中央に向かうベクトルを計算
-            const dirX = (centerX - bg.x) / distance;
-            const dirY = (centerY - bg.y) / distance;
-            
-            // 背景を中央方向に移動
-            bg.x += dirX * moveSpeed;
-            bg.y += dirY * moveSpeed;
-        } else {
-            // 中央に到達したら、新しい外側の位置に移動
-            const newDistance = Math.max(config.width, config.height) * 1.5;
-            bg.x = centerX + Math.cos(backgroundAngle) * newDistance;
-            bg.y = centerY + Math.sin(backgroundAngle) * newDistance;
+        // 左に少しだけ移動したら、元の位置に戻す
+        // 少ししか動かさないことで、端が見えることはない
+        if (bg.x < -5) {
+            bg.x = 0;
         }
     } catch (e) {
         console.error("背景更新エラー:", e);
