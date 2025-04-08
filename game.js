@@ -839,3 +839,158 @@ function gameOver() {
     const restartButton = scene.add.text(config.width / 2, config.height / 2 + 50, 'Restart', { fontSize: '24px', fill: '#ffffff', backgroundColor: '#333333', padding: { left: 20, right: 20, top: 10, bottom: 10 } }).setOrigin(0.5).setInteractive();
     restartButton.on('pointerdown', () => window.location.reload());
 }
+
+// クリア条件をチェックする関数
+function checkGameClear() {
+    // レベル10に到達でゲームクリア
+    if (level >= 10 && !gameClearTriggered) {
+        gameClearTriggered = true;
+        
+        // ペヨーテくんを大きく表示
+        const centerX = config.width / 2;
+        const centerY = config.height / 2;
+        const scene = this;
+        
+        // 現在の位置から中央に移動
+        this.tweens.add({
+            targets: player,
+            x: centerX,
+            y: centerY,
+            scale: 0.8, // 通常の0.3から大きくする
+            duration: 1000,
+            ease: 'Power2',
+            onComplete: () => {
+                // 回転アニメーション
+                scene.tweens.add({
+                    targets: player,
+                    angle: 360,
+                    duration: 2000,
+                    ease: 'Power1',
+                    repeat: -1
+                });
+                
+                // 拡大縮小アニメーション
+                scene.tweens.add({
+                    targets: player,
+                    scale: 1.0,
+                    duration: 1500,
+                    ease: 'Sine.easeInOut',
+                    yoyo: true,
+                    repeat: -1
+                });
+                
+                // 光の粒子エフェクト
+                const particles = scene.add.particles('player');
+                particles.setDepth(15);
+                
+                const emitter = particles.createEmitter({
+                    lifespan: 2000,
+                    speed: { min: 50, max: 100 },
+                    scale: { start: 0.1, end: 0 },
+                    alpha: { start: 1, end: 0 },
+                    rotate: { min: 0, max: 360 },
+                    tint: [0xffff00, 0xff00ff, 0x00ffff, 0x88ff88],
+                    frequency: 50,
+                    blendMode: 'ADD'
+                });
+                
+                emitter.startFollow(player);
+                
+                // クリア報酬の表示
+                displayClearRewards(scene, centerX, centerY);
+            }
+        });
+        
+        // "GAME CLEAR!" テキストを表示（キラキラ効果付き）
+        const clearText = this.add.text(centerX, centerY - 150, 'GAME CLEAR!', {
+            fontFamily: 'Arial',
+            fontSize: 48,
+            color: '#ffff00',
+            stroke: '#000000',
+            strokeThickness: 6
+        }).setOrigin(0.5);
+        
+        // テキストをキラキラさせる
+        this.tweens.add({
+            targets: clearText,
+            alpha: 0.7,
+            scaleX: 1.1,
+            scaleY: 1.1,
+            duration: 500,
+            yoyo: true,
+            repeat: -1
+        });
+    }
+}
+
+// ゲームクリア関数
+function gameClear() {
+    // checkGameClear関数で処理するようになったので、この関数は最小限に
+    if (gameClearTriggered) return;
+    checkGameClear.call(game.scene.scenes[0]);
+}
+
+// 新しく追加：クリア報酬を表示する関数
+function displayClearRewards(scene, centerX, centerY) {
+    // 報酬テキスト（最終スコアとボーナスポイント）
+    const bonus = level * 500;
+    const finalScore = score + bonus;
+    
+    // スコア情報の表示
+    const scoreInfo = scene.add.text(centerX, centerY + 100, `最終スコア: ${finalScore}`, {
+        fontFamily: 'Arial',
+        fontSize: 32,
+        color: '#ffffff',
+        stroke: '#000000',
+        strokeThickness: 4
+    }).setOrigin(0.5);
+    
+    const bonusInfo = scene.add.text(centerX, centerY + 150, `クリアボーナス: +${bonus}`, {
+        fontFamily: 'Arial',
+        fontSize: 24,
+        color: '#ffff00',
+        stroke: '#000000',
+        strokeThickness: 3
+    }).setOrigin(0.5);
+    
+    // スコアカウントアップアニメーション
+    let currentScore = score;
+    const scoreInterval = setInterval(() => {
+        currentScore += Math.ceil((finalScore - currentScore) / 10) || 1;
+        scoreInfo.setText(`最終スコア: ${currentScore}`);
+        
+        if (currentScore >= finalScore) {
+            clearInterval(scoreInterval);
+            
+            // 「おめでとう！」テキスト
+            const congratsText = scene.add.text(centerX, centerY + 200, 'おめでとう！旅の終わりだ！', {
+                fontFamily: 'Arial',
+                fontSize: 28,
+                color: '#ff88ff',
+                stroke: '#000000',
+                strokeThickness: 4
+            }).setOrigin(0.5).setAlpha(0);
+            
+            // フェードイン
+            scene.tweens.add({
+                targets: congratsText,
+                alpha: 1,
+                duration: 1000,
+                ease: 'Power2'
+            });
+            
+            // もう一度プレイするボタン
+            const restartButton = scene.add.text(centerX, centerY + 250, 'もう一度プレイ', {
+                fontFamily: 'Arial',
+                fontSize: 24,
+                color: '#ffffff',
+                backgroundColor: '#333333',
+                padding: { left: 20, right: 20, top: 10, bottom: 10 }
+            }).setOrigin(0.5).setInteractive();
+            
+            restartButton.on('pointerdown', () => window.location.reload());
+            restartButton.on('pointerover', () => restartButton.setStyle({ color: '#ffff00' }));
+            restartButton.on('pointerout', () => restartButton.setStyle({ color: '#ffffff' }));
+        }
+    }, 50);
+}
