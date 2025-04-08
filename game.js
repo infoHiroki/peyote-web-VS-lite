@@ -214,18 +214,20 @@ function update(time, delta) {
         updateScoreText();
         updateLevelText();
 
-        // ジョイスティックのデバッグ情報
-        console.log(`Joystick - Angle: ${joystick.angle.toFixed(2)}, Force: ${joystick.force.toFixed(2)}`);
+        // デバッグログの出力を1秒に1回に制限（パフォーマンス向上のため）
+        if (Math.floor(time / 1000) !== Math.floor((time - delta) / 1000)) {
+            console.log(`Joystick - Angle: ${joystick.angle.toFixed(2)}, Force: ${joystick.force.toFixed(2)}`);
+        }
         
-        // 移動計算の改善
-        if (joystick.force > 0) {
+        // 移動ロジックをシンプルに
+        if (joystick.force > 0.2) { // デッドゾーン設定
             const angle = joystick.angle;
-            // forceを0.1〜1.0の範囲に制限
-            const force = Math.max(0.1, Math.min(1.0, joystick.force));
-            // 速度を50に下げてより細かい操作ができるように
-            const speed = 50;
+            const force = Math.min(1.0, joystick.force);
+            const speed = 40; // さらに速度を下げる
+            
             const vx = Math.cos(angle) * force * speed;
             const vy = Math.sin(angle) * force * speed;
+            
             player.setVelocity(vx, vy);
         } else {
             player.setVelocity(0, 0);
@@ -360,7 +362,7 @@ function updateSymbols(dt) {
             const vy = (dy / dist) * s.moveSpeed;
             s.setVelocity(vx, vy);
 
-            // 向きに応じてアニメーション切り替え
+            // 向きに応じてアニメーション切り替え - ここを修正
             if (Math.abs(vx) > Math.abs(vy)) {
                 if (vx > 0) {
                     s.anims.play('enemy_walk_right', true);
@@ -369,9 +371,9 @@ function updateSymbols(dt) {
                 }
             } else {
                 if (vy > 0) {
-                    s.anims.play('enemy_walk_up', true);
+                    s.anims.play('enemy_walk_down', true); // 下方向に移動
                 } else {
-                    s.anims.play('enemy_walk_down', true);
+                    s.anims.play('enemy_walk_up', true); // 上方向に移動
                 }
             }
         }
