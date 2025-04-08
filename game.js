@@ -596,7 +596,7 @@ function updateSymbols(dt) {
             const vy = (dy / dist) * s.moveSpeed;
             s.setVelocity(vx, vy);
 
-            // 向きに応じてアニメーション切り替え - 最終修正
+            // 向きに応じてアニメーション切り替え - 修正済み
             if (Math.abs(vx) > Math.abs(vy)) {
                 if (vx > 0) {
                     s.anims.play('enemy_walk_right', true);
