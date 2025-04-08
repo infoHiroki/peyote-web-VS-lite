@@ -32,6 +32,7 @@ let cursors;
 let targetPosition;
 
 let gameOverTriggered = false;
+let gameClearTriggered = false;
 let healthBar;
 let expBar;
 let levelText;
@@ -52,6 +53,14 @@ let influenceRadius = 120;
 let symbols = [];
 let expOrbs = [];
 let playerInvincible = 0;
+
+// ペヨーテの棘（弾）関連の変数
+let spines; // 弾のグループ
+let spineCooldown = 0; // 弾のクールダウン
+let spineMaxCooldown = 0.5; // 弾の発射間隔（秒）
+let spineSpeed = 600; // 弾の速度
+let spineLength = 30; // 弾の長さ
+let spineDamage = 7; // 弾のダメージ量
 
 // 背景関連の変数
 let backgrounds = [];
@@ -169,6 +178,8 @@ function create() {
         repeat: -1
     });
 
+    // ペヨーテの棘（弾）のグループを作成
+    spines = this.physics.add.group();
 
     influenceCircle = this.add.circle(0, 0, influenceRadius, 0x00ffff, 0.3);
     influenceCircle.setVisible(false);
@@ -179,8 +190,33 @@ function create() {
 
     targetPosition = new Phaser.Math.Vector2(config.width / 2, config.height / 2);
     this.input.on('pointerdown', (pointer) => {
-        targetPosition.x = pointer.x;
-        targetPosition.y = pointer.y;
+        // ゲームクリア後はタップでリトライを優先
+        if (gameClearTriggered) {
+            return;
+        }
+        
+        // 左側タップで移動、右側タップで攻撃の判定
+        if (pointer.x < config.width / 2) {
+            // 画面左側タップなら移動
+            targetPosition.x = pointer.x;
+            targetPosition.y = pointer.y;
+        } else {
+            // 画面右側タップならペヨーテの棘を発射
+            shootSpine(this, pointer.x, pointer.y);
+        }
+    });
+
+    // キーボード用の発射機能を追加
+    this.input.keyboard.on('keydown-SPACE', () => {
+        // ゲームクリア後は無効
+        if (gameClearTriggered) {
+            return;
+        }
+        
+        // スペースキーでも発射（プレイヤーの前方向に）
+        const dx = Math.cos(player.rotation);
+        const dy = Math.sin(player.rotation);
+        shootSpine(this, player.x + dx * 100, player.y + dy * 100);
     });
 
     createUI(this);
@@ -215,6 +251,14 @@ function create() {
     experience = 0;
     expToNextLevel = calculateExpToNextLevel();
     updateExpBar();
+
+    // ペヨーテの棘発射のクールダウン更新用タイマー
+    this.time.addEvent({
+        delay: 100,
+        callback: updateSpineCooldown,
+        callbackScope: this,
+        loop: true
+    });
 }
 
 // 背景の作成 - 常に中央部分が表示されるように配置
@@ -367,6 +411,7 @@ function update(time, delta) {
     updateExpOrbs(dt);
 
     if (influenceCooldown > 0) influenceCooldown -= dt;
+    if (spineCooldown > 0) spineCooldown -= dt;
 
     player.x = Phaser.Math.Clamp(player.x, 0, config.width);
     player.y = Phaser.Math.Clamp(player.y, 0, config.height);
@@ -819,8 +864,6 @@ function calculateExpToNextLevel() {
     return 20 + (level - 1) * 20; // 15 + (level - 1) * 15から変更
 }
 
-let gameClearTriggered = false;
-
 function gameOver() {
     if (gameClearTriggered) return;
     gameClearTriggered = true;
@@ -890,4 +933,138 @@ function displayClearRewards(scene, centerX, centerY) {
             // リスタートボタンはキャラクタータップに置き換えるため削除
         }
     }, 50);
+}
+
+// ペヨーテの棘のクールダウン更新
+function updateSpineCooldown(dt) {
+    if (spineCooldown > 0) {
+        spineCooldown -= 0.1; // 100ms間隔で呼び出されるため0.1秒減少
+    }
+}
+
+// ペヨーテの棘を発射する関数
+function shootSpine(scene, targetX, targetY) {
+    // クールダウン中なら発射しない
+    if (spineCooldown > 0) return;
+    
+    // クールダウンをリセット
+    spineCooldown = spineMaxCooldown;
+    
+    // プレイヤーの位置から目標位置への方向ベクトルを計算
+    const dx = targetX - player.x;
+    const dy = targetY - player.y;
+    const angle = Math.atan2(dy, dx);
+    
+    // 方向ベクトルを正規化
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const nx = dx / dist;
+    const ny = dy / dist;
+    
+    // 緑色の線（棘）を作成 - より棘らしく改良
+    const spine = scene.add.line(
+        player.x, player.y,
+        0, 0,
+        spineLength * nx, spineLength * ny,
+        0x00ff00, 1
+    );
+    spine.setLineWidth(3); // 線の太さを増加
+    spine.setDepth(9); // プレイヤーの下、他のオブジェクトの上に表示
+    
+    // 棘らしいデザインを追加（短い線を数本追加）
+    const spineCount = 3; // 追加する棘の数
+    const spineGraphics = scene.add.graphics();
+    spineGraphics.lineStyle(2, 0x00ff00, 0.8);
+    
+    // メイン棘の両側に短い棘を追加
+    for (let i = 0; i < spineCount; i++) {
+        // 側面にランダムな長さの棘を追加
+        const subLength = spineLength * (0.3 + Math.random() * 0.3); // メイン棘の30-60%の長さ
+        const offsetRatio = 0.4 + (i / spineCount) * 0.6; // 棘の位置（40-100%の位置に配置）
+        
+        // 左右にわずかにずらした位置に棘を追加
+        const sideOffset = Math.random() > 0.5 ? 1 : -1;
+        const perpX = -ny * sideOffset * 5; // 垂直方向に少しずらす
+        const perpY = nx * sideOffset * 5;
+        
+        // 棘の開始点と終了点
+        const startX = player.x + nx * (spineLength * offsetRatio);
+        const startY = player.y + ny * (spineLength * offsetRatio);
+        const endX = startX + perpX + nx * subLength * 0.5;
+        const endY = startY + perpY + ny * subLength * 0.5;
+        
+        spineGraphics.lineBetween(startX, startY, endX, endY);
+    }
+    
+    // グラフィックスを弾の子要素として追加
+    spineGraphics.setDepth(9);
+    scene.physics.world.enable(spineGraphics);
+    spineGraphics.body.setVelocity(nx * spineSpeed, ny * spineSpeed);
+    
+    // 3秒後に自動的に削除
+    scene.time.delayedCall(3000, () => {
+        spineGraphics.destroy();
+    });
+    
+    // 物理ボディを追加
+    scene.physics.add.existing(spine);
+    spine.body.setVelocity(nx * spineSpeed, ny * spineSpeed);
+    spine.rotation = angle; // 回転も設定
+    
+    // 弾のグループに追加
+    spines.add(spine);
+    
+    // 敵との衝突判定を追加
+    scene.physics.add.overlap(spine, symbols, onSpineHitSymbol, null, scene);
+    
+    // 3秒後に自動的に削除
+    scene.time.delayedCall(3000, () => {
+        spine.destroy();
+    });
+}
+
+// 棘が敵に当たった時の処理
+function onSpineHitSymbol(spine, symbol) {
+    // 変身完了した敵は攻撃対象外
+    if (symbol.transformationState === 3) return;
+    
+    // 無敵時間中の敵は攻撃対象外
+    if (symbol.invincibleTimer > 0) return;
+    
+    // 敵の変身メーターを増加
+    symbol.transformationMeter += spineDamage * influencePower;
+    
+    // 変身状態を更新
+    updateSymbolTransformationState(symbol);
+    
+    // 一定の無敵時間を設定
+    symbol.invincibleTimer = 0.5;
+    
+    // 敵をノックバック - より強いノックバック
+    const dx = symbol.x - spine.x;
+    const dy = symbol.y - spine.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const nx = dx / dist;
+    const ny = dy / dist;
+    symbol.setVelocity(nx * 150, ny * 150); // より強いノックバック
+    
+    // 小さなヒットエフェクト
+    try {
+        const hitEffect = spine.scene.add.circle(symbol.x, symbol.y, 10, 0x00ff00, 0.7);
+        hitEffect.setDepth(15);
+        
+        spine.scene.tweens.add({
+            targets: hitEffect,
+            scale: 0.1,
+            alpha: 0,
+            duration: 300,
+            onComplete: () => {
+                hitEffect.destroy();
+            }
+        });
+    } catch (e) {
+        console.error("ヒットエフェクト作成エラー:", e);
+    }
+    
+    // 棘を消す
+    spine.destroy();
 }
