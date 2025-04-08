@@ -155,7 +155,7 @@ function create() {
     createUI(this);
 
     this.time.addEvent({
-        delay: 2000,
+        delay: 1500,
         callback: () => {
             let spawnCount = 1;
             
@@ -288,7 +288,7 @@ function spawnSymbol(scene) {
     sprite.transformationMeter = 0;
     sprite.transformationState = 0;
     sprite.health = 20;
-    sprite.moveSpeed = 50 + Math.random() * 50;
+    sprite.moveSpeed = 70 + Math.random() * 70;
     sprite.transformationResistance = 1.0;
 
     sprite.invincibleTimer = 0;
@@ -385,10 +385,10 @@ function applyInfluenceToSymbol(symbol, scene) {
 
     if (symbol.transformationState === 1) {
         symbol.setVelocity(nx * 50, ny * 50);
-        symbol.invincibleTimer = 1.5;
+        symbol.invincibleTimer = 1.0;
     } else if (symbol.transformationState === 2) {
         symbol.setVelocity(nx * 75, ny * 75);
-        symbol.invincibleTimer = 1.5;
+        symbol.invincibleTimer = 1.0;
     } else if (symbol.transformationState === 3) {
         symbol.setVelocity(0, 0);
         symbol.invincibleTimer = 2;
