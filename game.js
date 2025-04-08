@@ -210,26 +210,226 @@ function create() {
     updateExpBar();
 }
 
-// 背景の作成 - 画面端に画像を配置し、大きく表示
+// 背景の作成 - 中央から少しオフセットした位置に配置し、端が見えないようにする
 function createBackground(scene) {
     try {
-        // 背景画像を作成
-        const bg = scene.add.image(0, 0, 'background');
+        // 背景画像を作成 - 画面中央に配置
+        const bg = scene.add.image(config.width/2, config.height/2, 'background');
         bg.setDepth(0); // 最背面に配置
         
         // 画像を画面全体よりもかなり大きめに設定
-        const scaleX = (config.width / bg.width) * 3.0; // 画面の3.0倍の大きさ
-        const scaleY = (config.height / bg.height) * 3.0;
-        bg.setScale(scaleX, scaleY);
+        const maxScale = Math.max(
+            (config.width / bg.width) * 5.0,
+            (config.height / bg.height) * 5.0
+        );
+        bg.setScale(maxScale);
         
-        // 左上を原点として配置
-        bg.setOrigin(0, 0);
+        // 中心を原点として配置
+        bg.setOrigin(0.5, 0.5);
+        
+        // 初期位置を画面中央からオフセット（スマホで端が見えないよう調整）
+        bg.x = config.width/2 - 100;  // 左に少しずらす
+        bg.y = config.height/2 - 50;  // 上に少しずらす
         
         backgrounds = [bg]; // 背景は1つだけ
     } catch (e) {
         console.error("背景作成エラー:", e);
         // エラーが発生した場合は単色の背景を作成
         scene.cameras.main.setBackgroundColor('#222222');
+    }
+}
+
+// 背景の作成 - 画像が画面端よりさらに内側になるように配置
+function createBackground(scene) {
+    try {
+        // 背景画像を作成 - 画面中央に配置
+        const bg = scene.add.image(config.width/2, config.height/2, 'background');
+        bg.setDepth(0); // 最背面に配置
+        
+        // 画像を画面全体よりも大きめに設定（スマホでも端が見えないよう）
+        const maxScale = Math.max(
+            (config.width / bg.width) * 5.0,
+            (config.height / bg.height) * 5.0
+        );
+        bg.setScale(maxScale);
+        
+        // 中心を原点として配置
+        bg.setOrigin(0.5, 0.5);
+        
+        // 初期位置を画面中央に設定
+        bg.x = config.width/2;
+        bg.y = config.height/2;
+        
+        backgrounds = [bg]; // 背景は1つだけ
+    } catch (e) {
+        console.error("背景作成エラー:", e);
+        // エラーが発生した場合は単色の背景を作成
+        scene.cameras.main.setBackgroundColor('#222222');
+    }
+}
+
+// 背景のスクロール更新 - 中央原点に合わせて調整
+function updateBackground(dt) {
+    try {
+        if (backgrounds.length === 0) return;
+        
+        const bg = backgrounds[0];
+        
+        // 背景を移動（dt値で調整された一定の速度）
+        bg.x += backgroundVelocityX * backgroundSpeed * dt;
+        bg.y += backgroundVelocityY * backgroundSpeed * dt;
+        
+        // 背景画像のサイズを取得（原点は中央なので半分で計算）
+        const bgHalfWidth = (bg.width * bg.scaleX) / 2;
+        const bgHalfHeight = (bg.height * bg.scaleY) / 2;
+        
+        // スクリーンの端からの許容距離
+        const marginX = config.width * 0.3;
+        const marginY = config.height * 0.3;
+        
+        // 画面端に近づきすぎたら跳ね返る
+        if (bg.x <= config.width/2 - bgHalfWidth + marginX || bg.x >= config.width/2 + bgHalfWidth - marginX) {
+            backgroundVelocityX *= -1; // X方向を反転
+        }
+        
+        if (bg.y <= config.height/2 - bgHalfHeight + marginY || bg.y >= config.height/2 + bgHalfHeight - marginY) {
+            backgroundVelocityY *= -1; // Y方向を反転
+        }
+        
+        // 背景位置の制限（万が一範囲外になった場合の保険）
+        bg.x = Phaser.Math.Clamp(
+            bg.x, 
+            config.width/2 - bgHalfWidth + marginX, 
+            config.width/2 + bgHalfWidth - marginX
+        );
+        bg.y = Phaser.Math.Clamp(
+            bg.y, 
+            config.height/2 - bgHalfHeight + marginY, 
+            config.height/2 + bgHalfHeight - marginY
+        );
+    } catch (e) {
+        console.error("背景更新エラー:", e);
+    }
+}
+
+// 背景のスクロール更新 - 常に画面内に収まるように厳しく制限
+function updateBackground(dt) {
+    try {
+        if (backgrounds.length === 0) return;
+        
+        const bg = backgrounds[0];
+        
+        // 背景を移動（dt値で調整された一定の速度）
+        bg.x += backgroundVelocityX * backgroundSpeed * dt;
+        bg.y += backgroundVelocityY * backgroundSpeed * dt;
+        
+        // 背景画像のサイズを取得（原点は中央なので半分で計算）
+        const bgHalfWidth = (bg.width * bg.scaleX) / 2;
+        const bgHalfHeight = (bg.height * bg.scaleY) / 2;
+        
+        // 画面のサイズ（端から端までの距離）
+        const screenWidth = config.width;
+        const screenHeight = config.height;
+        
+        // 背景が動ける範囲を厳しく制限（常に画像が画面端の内側にくるよう）
+        const safeMarginX = bgHalfWidth - screenWidth/2 - 50; // 安全マージン（50px余分に）
+        const safeMarginY = bgHalfHeight - screenHeight/2 - 50; // 安全マージン（50px余分に）
+        
+        // 画面端に近づきすぎたら跳ね返る（厳しい制限）
+        if (Math.abs(bg.x - config.width/2) >= safeMarginX) {
+            backgroundVelocityX *= -1; // X方向を反転
+        }
+        
+        if (Math.abs(bg.y - config.height/2) >= safeMarginY) {
+            backgroundVelocityY *= -1; // Y方向を反転
+        }
+        
+        // 背景位置を厳しく制限（必ず画面内に収まるよう）
+        bg.x = Phaser.Math.Clamp(
+            bg.x, 
+            config.width/2 - safeMarginX, 
+            config.width/2 + safeMarginX
+        );
+        bg.y = Phaser.Math.Clamp(
+            bg.y, 
+            config.height/2 - safeMarginY, 
+            config.height/2 + safeMarginY
+        );
+    } catch (e) {
+        console.error("背景更新エラー:", e);
+    }
+}
+
+// 背景の作成 - 常に中央部分が表示されるように配置
+function createBackground(scene) {
+    try {
+        // 背景画像を作成 - 画面中央に配置
+        const bg = scene.add.image(config.width/2, config.height/2, 'background');
+        bg.setDepth(0); // 最背面に配置
+        
+        // 画像を画面全体よりもかなり大きめに設定
+        const maxScale = Math.max(
+            (config.width / bg.width) * 5.0,
+            (config.height / bg.height) * 5.0
+        );
+        bg.setScale(maxScale);
+        
+        // 中心を原点として配置
+        bg.setOrigin(0.5, 0.5);
+        
+        backgrounds = [bg]; // 背景は1つだけ
+    } catch (e) {
+        console.error("背景作成エラー:", e);
+        // エラーが発生した場合は単色の背景を作成
+        scene.cameras.main.setBackgroundColor('#222222');
+    }
+}
+
+// 背景のスクロール更新 - 画像の端が見える前に方向転換
+function updateBackground(dt) {
+    try {
+        if (backgrounds.length === 0) return;
+        
+        const bg = backgrounds[0];
+        
+        // 背景を移動（dt値で調整された一定の速度）
+        bg.x += backgroundVelocityX * backgroundSpeed * dt;
+        bg.y += backgroundVelocityY * backgroundSpeed * dt;
+        
+        // 背景画像のサイズを取得（原点は中央なので半分で計算）
+        const bgHalfWidth = (bg.width * bg.scaleX) / 2;
+        const bgHalfHeight = (bg.height * bg.scaleY) / 2;
+        
+        // 画面サイズ
+        const screenHalfWidth = config.width / 2;
+        const screenHalfHeight = config.height / 2;
+        
+        // 画像の端が見える前の安全マージン（十分大きく取る）
+        const safeMarginX = bgHalfWidth - screenHalfWidth - 100;
+        const safeMarginY = bgHalfHeight - screenHalfHeight - 100;
+        
+        // 画面端に近づく前に方向転換（画像の端が見える前）
+        if (Math.abs(bg.x - config.width/2) >= safeMarginX * 0.8) {
+            backgroundVelocityX *= -1; // X方向を反転
+        }
+        
+        if (Math.abs(bg.y - config.height/2) >= safeMarginY * 0.8) {
+            backgroundVelocityY *= -1; // Y方向を反転
+        }
+        
+        // 背景位置に絶対的な制限を設ける（保険）
+        bg.x = Phaser.Math.Clamp(
+            bg.x, 
+            config.width/2 - safeMarginX, 
+            config.width/2 + safeMarginX
+        );
+        bg.y = Phaser.Math.Clamp(
+            bg.y, 
+            config.height/2 - safeMarginY, 
+            config.height/2 + safeMarginY
+        );
+    } catch (e) {
+        console.error("背景更新エラー:", e);
     }
 }
 
@@ -308,39 +508,6 @@ function update(time, delta) {
 
     player.x = Phaser.Math.Clamp(player.x, 0, config.width);
     player.y = Phaser.Math.Clamp(player.y, 0, config.height);
-}
-
-// 背景のスクロール更新 - 非常にゆっくりと移動し、端で跳ね返る
-function updateBackground(dt) {
-    try {
-        if (backgrounds.length === 0) return;
-        
-        const bg = backgrounds[0];
-        
-        // 背景を非常にゆっくりと移動（dt値で調整された一定の速度）
-        bg.x += backgroundVelocityX * backgroundSpeed * dt;
-        bg.y += backgroundVelocityY * backgroundSpeed * dt;
-        
-        // 背景画像のサイズを取得
-        const bgWidth = bg.width * bg.scaleX;
-        const bgHeight = bg.height * bg.scaleY;
-        
-        // 左端または右端に到達したら跳ね返る
-        if (bg.x <= -(bgWidth - config.width) || bg.x >= 0) {
-            backgroundVelocityX *= -1; // 方向を反転
-        }
-        
-        // 上端または下端に到達したら跳ね返る
-        if (bg.y <= -(bgHeight - config.height) || bg.y >= 0) {
-            backgroundVelocityY *= -1; // 方向を反転
-        }
-        
-        // 位置の制限（万が一範囲外になった場合の保険）
-        bg.x = Phaser.Math.Clamp(bg.x, -(bgWidth - config.width), 0);
-        bg.y = Phaser.Math.Clamp(bg.y, -(bgHeight - config.height), 0);
-    } catch (e) {
-        console.error("背景更新エラー:", e);
-    }
 }
 
 function createUI(scene) {
@@ -671,75 +838,4 @@ function gameOver() {
     scene.add.text(config.width / 2, config.height / 2 - 50, 'GAME OVER', { fontSize: '48px', fill: '#ff0000' }).setOrigin(0.5);
     const restartButton = scene.add.text(config.width / 2, config.height / 2 + 50, 'Restart', { fontSize: '24px', fill: '#ffffff', backgroundColor: '#333333', padding: { left: 20, right: 20, top: 10, bottom: 10 } }).setOrigin(0.5).setInteractive();
     restartButton.on('pointerdown', () => window.location.reload());
-}
-
-function gameClear() {
-    if (gameClearTriggered) return;
-    gameClearTriggered = true;
-    game.scene.pause();
-    const scene = game.scene.scenes[0];
-    scene.add.text(config.width / 2, config.height / 2 - 50, 'CLEAR!', { fontSize: '48px', fill: '#00ff00' }).setOrigin(0.5);
-    const restartButton = scene.add.text(config.width / 2, config.height / 2 + 50, 'Restart', { fontSize: '24px', fill: '#ffffff', backgroundColor: '#333333', padding: { left: 20, right: 20, top: 10, bottom: 10 } }).setOrigin(0.5).setInteractive();
-    restartButton.on('pointerdown', () => window.location.reload());
-}
-
-// クリア条件をチェックする関数
-function checkGameClear() {
-    // レベル10に到達でゲームクリア
-    if (level >= 10 && !gameClearTriggered) {
-        gameClearTriggered = true;
-        
-        // ペヨーテくんを大きく表示
-        const centerX = config.width / 2;
-        const centerY = config.height / 2;
-        
-        // 現在の位置から中央に移動
-        this.tweens.add({
-            targets: player,
-            x: centerX,
-            y: centerY,
-            scale: 0.8, // 通常の0.3から大きくする
-            duration: 1000,
-            ease: 'Power2',
-            onComplete: () => {
-                // 回転アニメーション
-                this.tweens.add({
-                    targets: player,
-                    angle: 360,
-                    duration: 2000,
-                    ease: 'Power1',
-                    repeat: -1
-                });
-                
-                // 拡大縮小アニメーション
-                this.tweens.add({
-                    targets: player,
-                    scale: 1.0,
-                    duration: 1500,
-                    ease: 'Sine.easeInOut',
-                    yoyo: true,
-                    repeat: -1
-                });
-            }
-        });
-        
-        // "GAME CLEAR!" テキストを表示
-        const clearText = this.add.text(centerX, centerY - 150, 'GAME CLEAR!', {
-            fontFamily: 'Arial',
-            fontSize: 48,
-            color: '#ffff00',
-            stroke: '#000000',
-            strokeThickness: 8
-        }).setOrigin(0.5);
-        
-        // テキスト拡大縮小アニメーション
-        this.tweens.add({
-            targets: clearText,
-            scale: 1.2,
-            duration: 1000,
-            ease: 'Sine.easeInOut',
-            yoyo: true,
-            repeat: -1
-        });
-    }
 }
