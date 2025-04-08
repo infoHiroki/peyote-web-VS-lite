@@ -211,53 +211,81 @@ function create() {
 
 // 背景の作成
 function createBackground(scene) {
-    // 背景画像をランダムに選択
-    const bgIndex = Math.floor(Math.random() * 6) + 1;
-    
-    // 大きめに背景を2枚生成 (交互に移動して無限スクロール効果)
-    for (let i = 0; i < 2; i++) {
-        const bg = scene.add.image(config.width / 2, config.height / 2 + i * config.height, `background${bgIndex}`);
-        bg.setDepth(0); // 最背面に配置
+    try {
+        // 背景画像をランダムに選択
+        const bgIndex = Math.floor(Math.random() * 6) + 1;
         
-        // 画像を画面全体に合わせて拡大
-        const scaleX = config.width / bg.width * 1.2; // 少し大きめに
-        const scaleY = config.height / bg.height * 1.2;
-        bg.setScale(Math.max(scaleX, scaleY));
-        
+        // 大きめに背景を2枚生成 (交互に移動して無限スクロール効果)
+        for (let i = 0; i < 2; i++) {
+            // 背景画像がロードされているか確認
+            if (scene.textures.exists(`background${bgIndex}`)) {
+                const bg = scene.add.image(config.width / 2, config.height / 2 + i * config.height, `background${bgIndex}`);
+                bg.setDepth(0); // 最背面に配置
+                
+                // 画像を画面全体に合わせて拡大
+                const scaleX = config.width / bg.width * 1.2; // 少し大きめに
+                const scaleY = config.height / bg.height * 1.2;
+                bg.setScale(Math.max(scaleX, scaleY));
+                
+                backgrounds.push(bg);
+            } else {
+                // 背景画像が読み込めない場合は単色の背景を作成
+                const bg = scene.add.rectangle(config.width / 2, config.height / 2 + i * config.height, config.width * 1.2, config.height * 1.2, 0x222222);
+                bg.setDepth(0);
+                backgrounds.push(bg);
+                console.warn(`背景画像 background${bgIndex} が読み込めませんでした。`);
+            }
+        }
+    } catch (e) {
+        console.error("背景作成エラー:", e);
+        // エラーが発生した場合は単色の背景を作成
+        const bg = scene.add.rectangle(config.width / 2, config.height / 2, config.width, config.height, 0x222222);
+        bg.setDepth(0);
         backgrounds.push(bg);
     }
 }
 
 // 音楽の設定
 function setupMusic(scene) {
-    musicTracks = [
-        scene.sound.add('music1'),
-        scene.sound.add('music2'),
-        scene.sound.add('music3')
-    ];
-    
-    // ランダムな曲を選択して再生
-    playRandomMusic();
-    
-    // 曲が終わったら次の曲を再生
-    musicTracks.forEach(track => {
-        track.once('complete', playRandomMusic);
-    });
+    try {
+        musicTracks = [
+            scene.sound.add('music1'),
+            scene.sound.add('music2'),
+            scene.sound.add('music3')
+        ];
+        
+        // ランダムな曲を選択して再生
+        playRandomMusic();
+        
+        // 曲が終わったら次の曲を再生
+        musicTracks.forEach(track => {
+            track.once('complete', playRandomMusic);
+        });
+    } catch (e) {
+        console.error("音楽の読み込みエラー:", e);
+        // エラーが発生しても処理を続行
+    }
 }
 
 // ランダムな曲を再生
 function playRandomMusic() {
-    // 前の曲が再生中なら停止
-    if (music && music.isPlaying) {
-        music.stop();
+    try {
+        // 前の曲が再生中なら停止
+        if (music && music.isPlaying) {
+            music.stop();
+        }
+        
+        // ランダムに曲を選んで再生
+        if (musicTracks && musicTracks.length > 0) {
+            const index = Math.floor(Math.random() * musicTracks.length);
+            music = musicTracks[index];
+            music.play({
+                volume: 0.5
+            });
+        }
+    } catch (e) {
+        console.error("音楽再生エラー:", e);
     }
-    
-    // ランダムに曲を選んで再生
-    const index = Math.floor(Math.random() * musicTracks.length);
-    music = musicTracks[index];
-    music.play({
-        volume: 0.5
-    });
 }
 
 function update(time, delta) {
@@ -296,27 +324,31 @@ function update(time, delta) {
 
 // 背景のスクロール更新
 function updateBackground(dt) {
-    // プレイヤーの移動方向に合わせて背景をスクロール
-    const vx = player.body.velocity.x;
-    const vy = player.body.velocity.y;
-    
-    for (const bg of backgrounds) {
-        // プレイヤーの移動と逆方向に背景を動かして移動感を出す
-        bg.x -= (vx * dt * backgroundSpeed * 0.05);
-        bg.y -= (vy * dt * backgroundSpeed * 0.05);
+    try {
+        // プレイヤーの移動方向に合わせて背景をスクロール
+        const vx = player.body.velocity.x;
+        const vy = player.body.velocity.y;
         
-        // 背景の端が表示されないように位置を調整
-        if (bg.y < -config.height / 2) {
-            bg.y += config.height * 2;
-        } else if (bg.y > config.height * 1.5) {
-            bg.y -= config.height * 2;
+        for (const bg of backgrounds) {
+            // プレイヤーの移動と逆方向に背景を動かして移動感を出す
+            bg.x -= (vx * dt * backgroundSpeed * 0.05);
+            bg.y -= (vy * dt * backgroundSpeed * 0.05);
+            
+            // 背景の端が表示されないように位置を調整
+            if (bg.y < -config.height / 2) {
+                bg.y += config.height * 2;
+            } else if (bg.y > config.height * 1.5) {
+                bg.y -= config.height * 2;
+            }
+            
+            if (bg.x < -config.width / 2) {
+                bg.x += config.width * 2;
+            } else if (bg.x > config.width * 1.5) {
+                bg.x -= config.width * 2;
+            }
         }
-        
-        if (bg.x < -config.width / 2) {
-            bg.x += config.width * 2;
-        } else if (bg.x > config.width * 1.5) {
-            bg.x -= config.width * 2;
-        }
+    } catch (e) {
+        console.error("背景更新エラー:", e);
     }
 }
 
