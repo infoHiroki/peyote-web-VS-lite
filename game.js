@@ -55,7 +55,7 @@ let playerInvincible = 0;
 
 // 背景関連の変数
 let backgrounds = [];
-let backgroundSpeed = 1.0; // 人間の目でしっかり認識できる速度に大幅アップ
+let backgroundSpeed = 3.0; // さらに3倍速く（1.0から3.0へ）
 let backgroundVelocityX = -1; // 背景の移動方向（負の値で左方向）
 let backgroundVelocityY = -0.5; // 背景の移動方向（負の値で上方向）
 
@@ -215,55 +215,22 @@ function create() {
     updateExpBar();
 }
 
-// 背景の作成 - 中央から少しオフセットした位置に配置し、端が見えないようにする
+// 背景の作成 - 常に中央部分が表示されるように配置
 function createBackground(scene) {
     try {
         // 背景画像を作成 - 画面中央に配置
         const bg = scene.add.image(config.width/2, config.height/2, 'background');
         bg.setDepth(0); // 最背面に配置
         
-        // 画像を画面全体よりもかなり大きめに設定
+        // 画像を画面全体よりも適度な大きさに設定（画質を考慮して縮小）
         const maxScale = Math.max(
-            (config.width / bg.width) * 5.0,
-            (config.height / bg.height) * 5.0
+            (config.width / bg.width) * 3.0, // 5.0から3.0に縮小
+            (config.height / bg.height) * 3.0 // 5.0から3.0に縮小
         );
         bg.setScale(maxScale);
         
         // 中心を原点として配置
         bg.setOrigin(0.5, 0.5);
-        
-        // 初期位置を画面中央からオフセット（スマホで端が見えないよう調整）
-        bg.x = config.width/2 - 100;  // 左に少しずらす
-        bg.y = config.height/2 - 50;  // 上に少しずらす
-        
-        backgrounds = [bg]; // 背景は1つだけ
-    } catch (e) {
-        console.error("背景作成エラー:", e);
-        // エラーが発生した場合は単色の背景を作成
-        scene.cameras.main.setBackgroundColor('#222222');
-    }
-}
-
-// 背景の作成 - 画像が画面端よりさらに内側になるように配置
-function createBackground(scene) {
-    try {
-        // 背景画像を作成 - 画面中央に配置
-        const bg = scene.add.image(config.width/2, config.height/2, 'background');
-        bg.setDepth(0); // 最背面に配置
-        
-        // 画像を画面全体よりも大きめに設定（スマホでも端が見えないよう）
-        const maxScale = Math.max(
-            (config.width / bg.width) * 5.0,
-            (config.height / bg.height) * 5.0
-        );
-        bg.setScale(maxScale);
-        
-        // 中心を原点として配置
-        bg.setOrigin(0.5, 0.5);
-        
-        // 初期位置を画面中央に設定
-        bg.x = config.width/2;
-        bg.y = config.height/2;
         
         backgrounds = [bg]; // 背景は1つだけ
     } catch (e) {
@@ -274,123 +241,6 @@ function createBackground(scene) {
 }
 
 // 背景のスクロール更新 - 中央原点に合わせて調整
-function updateBackground(dt) {
-    try {
-        if (backgrounds.length === 0) return;
-        
-        const bg = backgrounds[0];
-        
-        // 背景を移動（dt値で調整された一定の速度）
-        bg.x += backgroundVelocityX * backgroundSpeed * dt;
-        bg.y += backgroundVelocityY * backgroundSpeed * dt;
-        
-        // 背景画像のサイズを取得（原点は中央なので半分で計算）
-        const bgHalfWidth = (bg.width * bg.scaleX) / 2;
-        const bgHalfHeight = (bg.height * bg.scaleY) / 2;
-        
-        // スクリーンの端からの許容距離
-        const marginX = config.width * 0.3;
-        const marginY = config.height * 0.3;
-        
-        // 画面端に近づきすぎたら跳ね返る
-        if (bg.x <= config.width/2 - bgHalfWidth + marginX || bg.x >= config.width/2 + bgHalfWidth - marginX) {
-            backgroundVelocityX *= -1; // X方向を反転
-        }
-        
-        if (bg.y <= config.height/2 - bgHalfHeight + marginY || bg.y >= config.height/2 + bgHalfHeight - marginY) {
-            backgroundVelocityY *= -1; // Y方向を反転
-        }
-        
-        // 背景位置の制限（万が一範囲外になった場合の保険）
-        bg.x = Phaser.Math.Clamp(
-            bg.x, 
-            config.width/2 - bgHalfWidth + marginX, 
-            config.width/2 + bgHalfWidth - marginX
-        );
-        bg.y = Phaser.Math.Clamp(
-            bg.y, 
-            config.height/2 - bgHalfHeight + marginY, 
-            config.height/2 + bgHalfHeight - marginY
-        );
-    } catch (e) {
-        console.error("背景更新エラー:", e);
-    }
-}
-
-// 背景のスクロール更新 - 常に画面内に収まるように厳しく制限
-function updateBackground(dt) {
-    try {
-        if (backgrounds.length === 0) return;
-        
-        const bg = backgrounds[0];
-        
-        // 背景を移動（dt値で調整された一定の速度）
-        bg.x += backgroundVelocityX * backgroundSpeed * dt;
-        bg.y += backgroundVelocityY * backgroundSpeed * dt;
-        
-        // 背景画像のサイズを取得（原点は中央なので半分で計算）
-        const bgHalfWidth = (bg.width * bg.scaleX) / 2;
-        const bgHalfHeight = (bg.height * bg.scaleY) / 2;
-        
-        // 画面のサイズ（端から端までの距離）
-        const screenWidth = config.width;
-        const screenHeight = config.height;
-        
-        // 背景が動ける範囲を厳しく制限（常に画像が画面端の内側にくるよう）
-        const safeMarginX = bgHalfWidth - screenWidth/2 - 50; // 安全マージン（50px余分に）
-        const safeMarginY = bgHalfHeight - screenHeight/2 - 50; // 安全マージン（50px余分に）
-        
-        // 画面端に近づきすぎたら跳ね返る（厳しい制限）
-        if (Math.abs(bg.x - config.width/2) >= safeMarginX) {
-            backgroundVelocityX *= -1; // X方向を反転
-        }
-        
-        if (Math.abs(bg.y - config.height/2) >= safeMarginY) {
-            backgroundVelocityY *= -1; // Y方向を反転
-        }
-        
-        // 背景位置を厳しく制限（必ず画面内に収まるよう）
-        bg.x = Phaser.Math.Clamp(
-            bg.x, 
-            config.width/2 - safeMarginX, 
-            config.width/2 + safeMarginX
-        );
-        bg.y = Phaser.Math.Clamp(
-            bg.y, 
-            config.height/2 - safeMarginY, 
-            config.height/2 + safeMarginY
-        );
-    } catch (e) {
-        console.error("背景更新エラー:", e);
-    }
-}
-
-// 背景の作成 - 常に中央部分が表示されるように配置
-function createBackground(scene) {
-    try {
-        // 背景画像を作成 - 画面中央に配置
-        const bg = scene.add.image(config.width/2, config.height/2, 'background');
-        bg.setDepth(0); // 最背面に配置
-        
-        // 画像を画面全体よりもかなり大きめに設定
-        const maxScale = Math.max(
-            (config.width / bg.width) * 5.0,
-            (config.height / bg.height) * 5.0
-        );
-        bg.setScale(maxScale);
-        
-        // 中心を原点として配置
-        bg.setOrigin(0.5, 0.5);
-        
-        backgrounds = [bg]; // 背景は1つだけ
-    } catch (e) {
-        console.error("背景作成エラー:", e);
-        // エラーが発生した場合は単色の背景を作成
-        scene.cameras.main.setBackgroundColor('#222222');
-    }
-}
-
-// 背景のスクロール更新 - 画像の端が見える前に方向転換
 function updateBackground(dt) {
     try {
         if (backgrounds.length === 0) return;
@@ -578,6 +428,39 @@ function checkGameClear() {
                 
                 // クリア報酬の表示
                 displayClearRewards(scene, centerX, centerY);
+                
+                // プレイヤーをタップ可能にする（リスタート用）
+                player.setInteractive();
+                
+                // タップ/クリック時のリスタート機能
+                player.on('pointerdown', function() {
+                    // タップした時の視覚的なフィードバック
+                    scene.cameras.main.flash(500, 255, 255, 255);
+                    scene.cameras.main.shake(300, 0.02);
+                    
+                    // フラッシュ後にリスタート
+                    scene.time.delayedCall(700, () => {
+                        window.location.reload();
+                    });
+                });
+                
+                // タップを促すテキストを表示
+                const tapText = scene.add.text(centerX, centerY + 300, 'キャラクターをタップしてリトライ！', {
+                    fontFamily: 'Arial',
+                    fontSize: 20,
+                    color: '#ffffff',
+                    stroke: '#000000',
+                    strokeThickness: 3
+                }).setOrigin(0.5);
+                
+                // 点滅アニメーション
+                scene.tweens.add({
+                    targets: tapText,
+                    alpha: 0.5,
+                    duration: 800,
+                    yoyo: true,
+                    repeat: -1
+                });
             }
         });
         
@@ -972,7 +855,7 @@ function displayClearRewards(scene, centerX, centerY) {
         if (currentScore >= finalScore) {
             clearInterval(scoreInterval);
             
-            // 「おめでとう！」テキスト
+            // "おめでとう！" テキスト
             const congratsText = scene.add.text(centerX, centerY + 200, 'おめでとう！旅の終わりだ！', {
                 fontFamily: 'Arial',
                 fontSize: 28,
@@ -989,18 +872,7 @@ function displayClearRewards(scene, centerX, centerY) {
                 ease: 'Power2'
             });
             
-            // もう一度プレイするボタン
-            const restartButton = scene.add.text(centerX, centerY + 250, 'もう一度プレイ', {
-                fontFamily: 'Arial',
-                fontSize: 24,
-                color: '#ffffff',
-                backgroundColor: '#333333',
-                padding: { left: 20, right: 20, top: 10, bottom: 10 }
-            }).setOrigin(0.5).setInteractive();
-            
-            restartButton.on('pointerdown', () => window.location.reload());
-            restartButton.on('pointerover', () => restartButton.setStyle({ color: '#ffff00' }));
-            restartButton.on('pointerout', () => restartButton.setStyle({ color: '#ffffff' }));
+            // リスタートボタンはキャラクタータップに置き換えるため削除
         }
     }, 50);
 }
