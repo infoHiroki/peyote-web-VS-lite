@@ -187,7 +187,7 @@ function create() {
     updateExpBar();
 
     joystick = this.rexVirtualJoystick.add(this, {
-        x: 80,
+        x: config.width / 2,
         y: config.height - 80,
         radius: 40,
         base: this.add.circle(0, 0, 40, 0x888888, 0.5),
@@ -227,6 +227,9 @@ function update(time, delta) {
     updateExpOrbs(dt);
 
     if (influenceCooldown > 0) influenceCooldown -= dt;
+
+    player.x = Phaser.Math.Clamp(player.x, 0, config.width);
+    player.y = Phaser.Math.Clamp(player.y, 0, config.height);
 
     // クリア条件は15分経過のみ
 }
