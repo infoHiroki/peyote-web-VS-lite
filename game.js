@@ -55,7 +55,9 @@ let playerInvincible = 0;
 
 // 背景関連の変数
 let backgrounds = [];
-let backgroundSpeed = 0.5;
+let backgroundSpeed = 0.2; // ゆっくりと一定速度で動くように変更
+let backgroundAngle = 0; // 背景の移動角度
+let backgroundRotateSpeed = 0.0005; // 背景回転速度
 
 // 音楽関連の変数
 let music;
@@ -216,13 +218,17 @@ function createBackground(scene) {
         bg.setDepth(0); // 最背面に配置
         
         // 画像を画面全体に合わせて十分に大きく設定
-        const scaleX = (config.width / bg.width) * 2.5; // 画面の2.5倍の大きさ
-        const scaleY = (config.height / bg.height) * 2.5;
+        const scaleX = (config.width / bg.width) * 3.0; // 画面の3.0倍の大きさに増加
+        const scaleY = (config.height / bg.height) * 3.0;
         bg.setScale(Math.max(scaleX, scaleY));
         
-        // 初期位置をランダムに設定
-        bg.x = config.width / 2 + (Math.random() * 200 - 100);
-        bg.y = config.height / 2 + (Math.random() * 200 - 100);
+        // 初期位置を画面外に設定
+        const distance = Math.max(config.width, config.height) * 1.5;
+        backgroundAngle = Math.random() * Math.PI * 2; // ランダムな初期角度
+        const startX = config.width / 2 + Math.cos(backgroundAngle) * distance;
+        const startY = config.height / 2 + Math.sin(backgroundAngle) * distance;
+        bg.x = startX;
+        bg.y = startY;
         
         backgrounds = [bg]; // 背景は1つだけ
     } catch (e) {
@@ -309,31 +315,40 @@ function update(time, delta) {
     player.y = Phaser.Math.Clamp(player.y, 0, config.height);
 }
 
-// 背景のスクロール更新 - よりゆっくりとした動き
+// 背景のスクロール更新 - プレイヤーの動きと無関係に常に中央に向かって移動
 function updateBackground(dt) {
     try {
         if (backgrounds.length === 0) return;
         
         const bg = backgrounds[0];
         
-        // プレイヤーの移動方向に合わせて背景をゆっくりスクロール
-        const vx = player.body.velocity.x;
-        const vy = player.body.velocity.y;
+        // 背景の角度をゆっくり変更して円を描くように移動
+        backgroundAngle += backgroundRotateSpeed * dt;
         
-        // スクロール速度を非常に遅くする (0.01)
-        bg.x -= (vx * dt * 0.01);
-        bg.y -= (vy * dt * 0.01);
+        // 背景の位置を計算
+        const centerX = config.width / 2;
+        const centerY = config.height / 2;
+        const distance = Math.sqrt(
+            Math.pow(bg.x - centerX, 2) + 
+            Math.pow(bg.y - centerY, 2)
+        );
         
-        // 背景が画面から大きく外れないように位置を調整（少しの移動範囲を許容）
-        const maxOffsetX = config.width * 0.5;
-        const maxOffsetY = config.height * 0.5;
+        // 常に中央に向かって移動
+        const moveSpeed = backgroundSpeed * dt * 100;
         
-        if (Math.abs(bg.x - config.width / 2) > maxOffsetX) {
-            bg.x = config.width / 2 + (bg.x > config.width / 2 ? maxOffsetX : -maxOffsetX);
-        }
-        
-        if (Math.abs(bg.y - config.height / 2) > maxOffsetY) {
-            bg.y = config.height / 2 + (bg.y > config.height / 2 ? maxOffsetY : -maxOffsetY);
+        if (distance > 5) {
+            // 中央に向かうベクトルを計算
+            const dirX = (centerX - bg.x) / distance;
+            const dirY = (centerY - bg.y) / distance;
+            
+            // 背景を中央方向に移動
+            bg.x += dirX * moveSpeed;
+            bg.y += dirY * moveSpeed;
+        } else {
+            // 中央に到達したら、新しい外側の位置に移動
+            const newDistance = Math.max(config.width, config.height) * 1.5;
+            bg.x = centerX + Math.cos(backgroundAngle) * newDistance;
+            bg.y = centerY + Math.sin(backgroundAngle) * newDistance;
         }
     } catch (e) {
         console.error("背景更新エラー:", e);
