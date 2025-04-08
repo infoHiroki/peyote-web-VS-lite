@@ -156,7 +156,12 @@ function create() {
 
     this.time.addEvent({
         delay: 2000,
-        callback: () => spawnSymbol(this),
+        callback: () => {
+            const spawnCount = Math.min(level, 5);
+            for(let i = 0; i < spawnCount; i++) {
+                spawnSymbol(this);
+            }
+        },
         callbackScope: this,
         loop: true
     });
@@ -436,7 +441,7 @@ function createExperienceOrb(x, y, value) {
 
 function onPlayerHitSymbol(player, symbol) {
     if (symbol.transformationState < 3) {
-        takeDamage(2);
+        takeDamage(5);
     }
 }
 
