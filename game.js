@@ -47,8 +47,8 @@ let maxHealth = 100;
 let influenceCircle;
 let influenceCooldown = 0;
 let influenceMaxCooldown = 1;
-let influencePower = 10;
-let influenceRadius = 120;
+let influencePower = 5;
+let influenceRadius = 80;
 let symbols = [];
 let expOrbs = [];
 let playerInvincible = 0;
@@ -726,8 +726,8 @@ function onSymbolFullyTransformed(symbol, scene) {
 
     // パーティクル作成（省略可能）
 
-    addExperience(20); // 10から20に増加
-    score += 20; // 10から20に増加
+    addExperience(10); // 20から10に減少
+    score += 10; // 20から10に減少
     updateScoreText();
 
     scene.time.delayedCall(2000, () => {
@@ -779,15 +779,15 @@ function onLevelUp() {
 function upgradeInfluence() {
     const t = Math.floor(Math.random() * 3);
     if (t === 0) {
-        // 影響力の強さを大幅に増加
-        influencePower += 10;
+        // 影響力の強さを増加（弱化）
+        influencePower += 5; // 10から5に減少
     } else if (t === 1) {
-        // 影響範囲を大幅に拡大
-        influenceRadius += 25; // 10から25に増加
+        // 影響範囲を拡大（弱化）
+        influenceRadius += 10; // 25から10に減少
         influenceCircle.setRadius(influenceRadius);
     } else if (t === 2) {
-        // クールダウンをより効果的に減少
-        influenceMaxCooldown = Math.max(0.3, influenceMaxCooldown - 0.15);
+        // クールダウンを減少（弱化）
+        influenceMaxCooldown = Math.max(0.5, influenceMaxCooldown - 0.1); // 0.15から0.1に減少、最小値も0.3から0.5に変更
     }
 }
 
@@ -815,8 +815,8 @@ function updateTimeText() {
 }
 
 function calculateExpToNextLevel() {
-    // レベルアップに必要な経験値を少なくする
-    return 15 + (level - 1) * 15;
+    // レベルアップに必要な経験値を増加
+    return 20 + (level - 1) * 20; // 15 + (level - 1) * 15から変更
 }
 
 let gameClearTriggered = false;
