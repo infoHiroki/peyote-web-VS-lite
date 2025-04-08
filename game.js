@@ -327,7 +327,7 @@ function updateSymbols(dt) {
             const vy = (dy / dist) * s.moveSpeed;
             s.setVelocity(vx, vy);
 
-            // 向きに応じてアニメーション切り替え - 上下の向きを修正
+            // 向きに応じてアニメーション切り替え - 元に戻す
             if (Math.abs(vx) > Math.abs(vy)) {
                 if (vx > 0) {
                     s.anims.play('enemy_walk_right', true);
@@ -336,9 +336,9 @@ function updateSymbols(dt) {
                 }
             } else {
                 if (vy > 0) {
-                    s.anims.play('enemy_walk_down', true); // 下向きに修正
+                    s.anims.play('enemy_walk_up', true); // 元に戻す
                 } else {
-                    s.anims.play('enemy_walk_up', true); // 上向きに修正
+                    s.anims.play('enemy_walk_down', true); // 元に戻す
                 }
             }
         }
