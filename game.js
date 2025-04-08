@@ -205,13 +205,16 @@ function update(time, delta) {
         updateScoreText();
         updateLevelText();
 
-        let force = joystick.force;
-        force = Math.min(1, force);
-        console.log(`Force: ${force}`);
-
-        if (force > 0) {
+        // ジョイスティックのデバッグ情報
+        console.log(`Joystick - Angle: ${joystick.angle.toFixed(2)}, Force: ${joystick.force.toFixed(2)}`);
+        
+        // 移動計算の改善
+        if (joystick.force > 0) {
             const angle = joystick.angle;
-            const speed = 100;
+            // forceを0.1〜1.0の範囲に制限
+            const force = Math.max(0.1, Math.min(1.0, joystick.force));
+            // 速度を50に下げてより細かい操作ができるように
+            const speed = 50;
             const vx = Math.cos(angle) * force * speed;
             const vy = Math.sin(angle) * force * speed;
             player.setVelocity(vx, vy);
