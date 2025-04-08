@@ -66,13 +66,13 @@ function preload() {
 
     // 背景画像の読み込み
     for (let i = 1; i <= 6; i++) {
-        this.load.image(`background${i}`, `assets/images/songCoverImage/Song Cover Image ${i}.jpg`);
+        this.load.image(`background${i}`, `assets/images/songCoverImage/Song_Cover_Image_${i}.jpg`);
     }
 
     // 音楽ファイルの読み込み
-    this.load.audio('music1', 'assets/audio/Cacti Dreams.mp3');
-    this.load.audio('music2', 'assets/audio/Desert Mirage.mp3');
-    this.load.audio('music3', 'assets/audio/Peyote Nights.mp3');
+    this.load.audio('music1', 'assets/audio/Cacti_Dreams.mp3');
+    this.load.audio('music2', 'assets/audio/Desert_Mirage.mp3');
+    this.load.audio('music3', 'assets/audio/Peyote_Nights.mp3');
 
     this.load.spritesheet('enemy_walk', 'assets/images/lpc_teen_animations_2025-04-08T05-06-21/standard/walk.png', {
         frameWidth: 64,
