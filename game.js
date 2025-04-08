@@ -194,17 +194,27 @@ function update(time, delta) {
         updateTimeText();
         updateScoreText();
         updateLevelText();
+        
+        updatePlayerMovement();
+        
+        // ゲームクリア条件をチェック
+        checkGameClear.call(this);
     }
 
-    if (playerInvincible > 0) playerInvincible -= dt;
+    if (playerInvincible > 0) {
+        playerInvincible -= dt;
+        player.alpha = Math.sin(time * 20) > 0 ? 0.3 : 1;
+    } else {
+        player.alpha = 1;
+    }
 
-    updatePlayerMovement();
     updateSymbols(dt);
     updateExpOrbs(dt);
 
     if (influenceCooldown > 0) influenceCooldown -= dt;
 
-    // クリア条件は15分経過のみ
+    player.x = Phaser.Math.Clamp(player.x, 0, config.width);
+    player.y = Phaser.Math.Clamp(player.y, 0, config.height);
 }
 
 function createUI(scene) {
@@ -545,4 +555,65 @@ function gameClear() {
     scene.add.text(config.width / 2, config.height / 2 - 50, 'CLEAR!', { fontSize: '48px', fill: '#00ff00' }).setOrigin(0.5);
     const restartButton = scene.add.text(config.width / 2, config.height / 2 + 50, 'Restart', { fontSize: '24px', fill: '#ffffff', backgroundColor: '#333333', padding: { left: 20, right: 20, top: 10, bottom: 10 } }).setOrigin(0.5).setInteractive();
     restartButton.on('pointerdown', () => window.location.reload());
+}
+
+// クリア条件をチェックする関数
+function checkGameClear() {
+    // レベル10に到達でゲームクリア
+    if (level >= 10 && !gameClearTriggered) {
+        gameClearTriggered = true;
+        
+        // ペヨーテくんを大きく表示
+        const centerX = config.width / 2;
+        const centerY = config.height / 2;
+        
+        // 現在の位置から中央に移動
+        this.tweens.add({
+            targets: player,
+            x: centerX,
+            y: centerY,
+            scale: 0.8, // 通常の0.3から大きくする
+            duration: 1000,
+            ease: 'Power2',
+            onComplete: () => {
+                // 回転アニメーション
+                this.tweens.add({
+                    targets: player,
+                    angle: 360,
+                    duration: 2000,
+                    ease: 'Power1',
+                    repeat: -1
+                });
+                
+                // 拡大縮小アニメーション
+                this.tweens.add({
+                    targets: player,
+                    scale: 1.0,
+                    duration: 1500,
+                    ease: 'Sine.easeInOut',
+                    yoyo: true,
+                    repeat: -1
+                });
+            }
+        });
+        
+        // "GAME CLEAR!" テキストを表示
+        const clearText = this.add.text(centerX, centerY - 150, 'GAME CLEAR!', {
+            fontFamily: 'Arial',
+            fontSize: 48,
+            color: '#ffff00',
+            stroke: '#000000',
+            strokeThickness: 8
+        }).setOrigin(0.5);
+        
+        // テキスト拡大縮小アニメーション
+        this.tweens.add({
+            targets: clearText,
+            scale: 1.2,
+            duration: 1000,
+            ease: 'Sine.easeInOut',
+            yoyo: true,
+            repeat: -1
+        });
+    }
 }
