@@ -208,8 +208,9 @@ function update(time, delta) {
         const force = joystick.force;
         if (force > 0) {
             const angle = joystick.angle;
-            const vx = Math.cos(angle) * force * 200;
-            const vy = Math.sin(angle) * force * 200;
+            const speed = 100;
+            const vx = Math.cos(angle) * force * speed;
+            const vy = Math.sin(angle) * force * speed;
             player.setVelocity(vx, vy);
         } else {
             player.setVelocity(0, 0);
