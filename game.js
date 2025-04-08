@@ -205,7 +205,10 @@ function update(time, delta) {
         updateScoreText();
         updateLevelText();
 
-        const force = joystick.force;
+        let force = joystick.force;
+        force = Math.min(1, force);
+        console.log(`Force: ${force}`);
+
         if (force > 0) {
             const angle = joystick.angle;
             const speed = 100;
