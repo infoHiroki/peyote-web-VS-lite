@@ -195,18 +195,12 @@ function create() {
             return;
         }
         
-        // 左側タップで移動、右側タップで攻撃の判定
-        if (pointer.x < config.width / 2) {
-            // 画面左側タップなら移動
-            targetPosition.x = pointer.x;
-            targetPosition.y = pointer.y;
-        } else {
-            // 画面右側タップならペヨーテの棘を発射
-            shootSpine(this, pointer.x, pointer.y);
-        }
+        // タップは移動専用に変更
+        targetPosition.x = pointer.x;
+        targetPosition.y = pointer.y;
     });
 
-    // キーボード用の発射機能を追加
+    // キーボード用の発射機能は残す
     this.input.keyboard.on('keydown-SPACE', () => {
         // ゲームクリア後は無効
         if (gameClearTriggered) {
@@ -256,6 +250,41 @@ function create() {
     this.time.addEvent({
         delay: 100,
         callback: updateSpineCooldown,
+        callbackScope: this,
+        loop: true
+    });
+
+    // 自動弾発射タイマーを追加
+    this.time.addEvent({
+        delay: 1000, // 1秒間隔で発射
+        callback: () => {
+            if (!gameClearTriggered && !gameOverTriggered) {
+                // プレイヤーの周囲にいる最も近い敵を探す
+                let nearestSymbol = null;
+                let minDist = Infinity;
+                
+                for (const s of symbols) {
+                    if (s.transformationState < 3) { // 変身完了していない敵のみ
+                        const dist = Phaser.Math.Distance.Between(player.x, player.y, s.x, s.y);
+                        if (dist < minDist) {
+                            minDist = dist;
+                            nearestSymbol = s;
+                        }
+                    }
+                }
+                
+                // 一番近い敵がいればその方向に発射
+                if (nearestSymbol) {
+                    shootSpine(this, nearestSymbol.x, nearestSymbol.y);
+                } else {
+                    // 敵がいない場合はランダムな方向に発射
+                    const randomAngle = Math.random() * Math.PI * 2;
+                    const targetX = player.x + Math.cos(randomAngle) * 100;
+                    const targetY = player.y + Math.sin(randomAngle) * 100;
+                    shootSpine(this, targetX, targetY);
+                }
+            }
+        },
         callbackScope: this,
         loop: true
     });
