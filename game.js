@@ -42,8 +42,8 @@ let score = 0;
 let level = 1;
 let experience = 0;
 let expToNextLevel = 20;
-let health = 50;
-let maxHealth = 50;
+let health = 100;
+let maxHealth = 100;
 let influenceCircle;
 let influenceCooldown = 0;
 let influenceMaxCooldown = 1;
@@ -585,7 +585,7 @@ function createExperienceOrb(x, y, value) {
 
 function onPlayerHitSymbol(player, symbol) {
     if (symbol.transformationState < 3) {
-        takeDamage(10);
+        takeDamage(5);
     }
 }
 
