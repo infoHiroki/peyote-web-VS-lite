@@ -64,10 +64,8 @@ let musicTracks = [];
 function preload() {
     this.load.image('player', 'assets/images/player.png');
 
-    // 背景画像の読み込み
-    for (let i = 1; i <= 6; i++) {
-        this.load.image(`background${i}`, `assets/images/songCoverImage/Song_Cover_Image_${i}.jpg`);
-    }
+    // 背景画像の読み込み - 一枚だけ読み込む
+    this.load.image('background', `assets/images/songCoverImage/Song_Cover_Image_3.jpg`);
 
     // 音楽ファイルの読み込み
     this.load.audio('music1', 'assets/audio/Cacti_Dreams.mp3');
@@ -106,7 +104,8 @@ function create() {
     player = this.physics.add.sprite(config.width / 2, config.height / 2, 'player');
     player.setScale(0.3);
     player.setDepth(10);
-    player.body.setCircle(38, -38 + player.width / 2, -38 + player.height / 2);
+    // 当たり判定を小さくする - 半径を20に変更（以前は38）
+    player.body.setCircle(20, -20 + player.width / 2, -20 + player.height / 2);
 
     this.anims.create({
         key: 'enemy_walk_down',
@@ -209,39 +208,27 @@ function create() {
     updateExpBar();
 }
 
-// 背景の作成
+// 背景の作成 - 背景を一枚の大きい画像にしてゆっくり移動
 function createBackground(scene) {
     try {
-        // 背景画像をランダムに選択
-        const bgIndex = Math.floor(Math.random() * 6) + 1;
+        // 大きな背景画像を作成
+        const bg = scene.add.image(config.width / 2, config.height / 2, 'background');
+        bg.setDepth(0); // 最背面に配置
         
-        // 大きめに背景を2枚生成 (交互に移動して無限スクロール効果)
-        for (let i = 0; i < 2; i++) {
-            // 背景画像がロードされているか確認
-            if (scene.textures.exists(`background${bgIndex}`)) {
-                const bg = scene.add.image(config.width / 2, config.height / 2 + i * config.height, `background${bgIndex}`);
-                bg.setDepth(0); // 最背面に配置
-                
-                // 画像を画面全体に合わせて拡大
-                const scaleX = config.width / bg.width * 1.2; // 少し大きめに
-                const scaleY = config.height / bg.height * 1.2;
-                bg.setScale(Math.max(scaleX, scaleY));
-                
-                backgrounds.push(bg);
-            } else {
-                // 背景画像が読み込めない場合は単色の背景を作成
-                const bg = scene.add.rectangle(config.width / 2, config.height / 2 + i * config.height, config.width * 1.2, config.height * 1.2, 0x222222);
-                bg.setDepth(0);
-                backgrounds.push(bg);
-                console.warn(`背景画像 background${bgIndex} が読み込めませんでした。`);
-            }
-        }
+        // 画像を画面全体に合わせて十分に大きく設定
+        const scaleX = (config.width / bg.width) * 2.5; // 画面の2.5倍の大きさ
+        const scaleY = (config.height / bg.height) * 2.5;
+        bg.setScale(Math.max(scaleX, scaleY));
+        
+        // 初期位置をランダムに設定
+        bg.x = config.width / 2 + (Math.random() * 200 - 100);
+        bg.y = config.height / 2 + (Math.random() * 200 - 100);
+        
+        backgrounds = [bg]; // 背景は1つだけ
     } catch (e) {
         console.error("背景作成エラー:", e);
         // エラーが発生した場合は単色の背景を作成
-        const bg = scene.add.rectangle(config.width / 2, config.height / 2, config.width, config.height, 0x222222);
-        bg.setDepth(0);
-        backgrounds.push(bg);
+        scene.cameras.main.setBackgroundColor('#222222');
     }
 }
 
@@ -322,30 +309,31 @@ function update(time, delta) {
     player.y = Phaser.Math.Clamp(player.y, 0, config.height);
 }
 
-// 背景のスクロール更新
+// 背景のスクロール更新 - よりゆっくりとした動き
 function updateBackground(dt) {
     try {
-        // プレイヤーの移動方向に合わせて背景をスクロール
+        if (backgrounds.length === 0) return;
+        
+        const bg = backgrounds[0];
+        
+        // プレイヤーの移動方向に合わせて背景をゆっくりスクロール
         const vx = player.body.velocity.x;
         const vy = player.body.velocity.y;
         
-        for (const bg of backgrounds) {
-            // プレイヤーの移動と逆方向に背景を動かして移動感を出す
-            bg.x -= (vx * dt * backgroundSpeed * 0.05);
-            bg.y -= (vy * dt * backgroundSpeed * 0.05);
-            
-            // 背景の端が表示されないように位置を調整
-            if (bg.y < -config.height / 2) {
-                bg.y += config.height * 2;
-            } else if (bg.y > config.height * 1.5) {
-                bg.y -= config.height * 2;
-            }
-            
-            if (bg.x < -config.width / 2) {
-                bg.x += config.width * 2;
-            } else if (bg.x > config.width * 1.5) {
-                bg.x -= config.width * 2;
-            }
+        // スクロール速度を非常に遅くする (0.01)
+        bg.x -= (vx * dt * 0.01);
+        bg.y -= (vy * dt * 0.01);
+        
+        // 背景が画面から大きく外れないように位置を調整（少しの移動範囲を許容）
+        const maxOffsetX = config.width * 0.5;
+        const maxOffsetY = config.height * 0.5;
+        
+        if (Math.abs(bg.x - config.width / 2) > maxOffsetX) {
+            bg.x = config.width / 2 + (bg.x > config.width / 2 ? maxOffsetX : -maxOffsetX);
+        }
+        
+        if (Math.abs(bg.y - config.height / 2) > maxOffsetY) {
+            bg.y = config.height / 2 + (bg.y > config.height / 2 ? maxOffsetY : -maxOffsetY);
         }
     } catch (e) {
         console.error("背景更新エラー:", e);
