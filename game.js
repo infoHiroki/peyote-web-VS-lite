@@ -217,9 +217,9 @@ function createBackground(scene) {
         const bg = scene.add.image(0, 0, 'background');
         bg.setDepth(0); // 最背面に配置
         
-        // 画像を画面サイズにぴったり合わせる
-        const scaleX = config.width / bg.width;
-        const scaleY = config.height / bg.height;
+        // 画像を画面全体よりも大きめに設定（ただし左上を原点として配置）
+        const scaleX = (config.width / bg.width) * 1.5; // 画面の1.5倍の大きさ
+        const scaleY = (config.height / bg.height) * 1.5;
         bg.setScale(scaleX, scaleY);
         
         // 左上を原点として配置
@@ -318,11 +318,10 @@ function updateBackground(dt) {
         const bg = backgrounds[0];
         
         // 背景を非常にゆっくりと一定方向に動かす
-        bg.x -= 0.3 * dt; // 左方向にゆっくり移動
+        bg.x -= 0.5 * dt; // 左方向にゆっくり移動
         
         // 左に少しだけ移動したら、元の位置に戻す
-        // 少ししか動かさないことで、端が見えることはない
-        if (bg.x < -5) {
+        if (bg.x < -10) {
             bg.x = 0;
         }
     } catch (e) {
