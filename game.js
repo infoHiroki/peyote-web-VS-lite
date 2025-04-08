@@ -430,10 +430,15 @@ function checkGameClear() {
                 displayClearRewards(scene, centerX, centerY);
                 
                 // プレイヤーをタップ可能にする（リスタート用）
-                player.setInteractive();
+                player.removeInteractive(); // 一度削除してから再設定
+                player.setInteractive({ useHandCursor: true, pixelPerfect: false });
+                player.input.hitArea.setTo(-50, -50, 100, 100); // ヒットエリアを広く
                 
-                // タップ/クリック時のリスタート機能
+                // タップ/クリック時のリスタート機能（イベントリスナーを再設定）
+                player.off('pointerdown'); // 既存のイベントリスナーを削除
                 player.on('pointerdown', function() {
+                    console.log('タップされました！リトライします...');
+                    
                     // タップした時の視覚的なフィードバック
                     scene.cameras.main.flash(500, 255, 255, 255);
                     scene.cameras.main.shake(300, 0.02);
@@ -444,20 +449,28 @@ function checkGameClear() {
                     });
                 });
                 
-                // タップを促すテキストを表示
+                // タップを促すテキストを表示（よりはっきりと）
                 const tapText = scene.add.text(centerX, centerY + 300, 'キャラクターをタップしてリトライ！', {
                     fontFamily: 'Arial',
-                    fontSize: 20,
+                    fontSize: 24, // サイズを大きく
                     color: '#ffffff',
                     stroke: '#000000',
-                    strokeThickness: 3
+                    strokeThickness: 4,
+                    backgroundColor: '#333333',
+                    padding: { left: 10, right: 10, top: 5, bottom: 5 }
                 }).setOrigin(0.5);
                 
-                // 点滅アニメーション
+                // テキストもタップ可能に
+                tapText.setInteractive({ useHandCursor: true });
+                tapText.on('pointerdown', function() {
+                    window.location.reload();
+                });
+                
+                // 点滅アニメーション（より目立つように）
                 scene.tweens.add({
                     targets: tapText,
-                    alpha: 0.5,
-                    duration: 800,
+                    alpha: 0.6,
+                    duration: 500,
                     yoyo: true,
                     repeat: -1
                 });
