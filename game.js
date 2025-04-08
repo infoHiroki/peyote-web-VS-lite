@@ -61,6 +61,7 @@ let spineMaxCooldown = 0.5; // 弾の発射間隔（秒）
 let spineSpeed = 600; // 弾の速度
 let spineLength = 30; // 弾の長さ
 let spineDamage = 7; // 弾のダメージ量
+let spineGraphicsArray = []; // 追加の棘グラフィックス追跡用
 
 // 背景関連の変数
 let backgrounds = [];
@@ -438,6 +439,7 @@ function update(time, delta) {
 
     updateSymbols(dt);
     updateExpOrbs(dt);
+    updateSpines(dt);
 
     if (influenceCooldown > 0) influenceCooldown -= dt;
     if (spineCooldown > 0) spineCooldown -= dt;
@@ -1024,20 +1026,35 @@ function shootSpine(scene, targetX, targetY) {
         spineGraphics.lineBetween(startX, startY, endX, endY);
     }
     
-    // グラフィックスを弾の子要素として追加
+    // グラフィックスを追跡リストに追加
     spineGraphics.setDepth(9);
-    scene.physics.world.enable(spineGraphics);
-    spineGraphics.body.setVelocity(nx * spineSpeed, ny * spineSpeed);
+    spineGraphics.spineVelocityX = nx * spineSpeed;
+    spineGraphics.spineVelocityY = ny * spineSpeed;
+    spineGraphicsArray.push(spineGraphics);
     
     // 3秒後に自動的に削除
     scene.time.delayedCall(3000, () => {
+        const index = spineGraphicsArray.indexOf(spineGraphics);
+        if (index > -1) {
+            spineGraphicsArray.splice(index, 1);
+        }
         spineGraphics.destroy();
     });
     
     // 物理ボディを追加
-    scene.physics.add.existing(spine);
+    scene.physics.add.existing(spine, false); // dynamic=false でスタティックボディに
     spine.body.setVelocity(nx * spineSpeed, ny * spineSpeed);
+    // 物理ボディのサイズを調整
+    spine.body.width = spineLength;
+    spine.body.height = 5;
+    spine.body.offset.x = 0;
+    spine.body.offset.y = -2.5;
+    // 棘の方向情報を保存
+    spine.directionX = nx;
+    spine.directionY = ny;
+    spine.moveSpeed = spineSpeed;
     spine.rotation = angle; // 回転も設定
+    spine.lifeTime = 3; // 寿命（秒）
     
     // 弾のグループに追加
     spines.add(spine);
@@ -1096,4 +1113,41 @@ function onSpineHitSymbol(spine, symbol) {
     
     // 棘を消す
     spine.destroy();
+}
+
+// 棘の更新処理
+function updateSpines(dt) {
+    // グループ内の棘を更新
+    spines.getChildren().forEach(spine => {
+        // 止まっていないか確認
+        if (spine.body && (Math.abs(spine.body.velocity.x) < 10 || Math.abs(spine.body.velocity.y) < 10)) {
+            // 速度を元に戻す
+            spine.body.setVelocity(
+                spine.directionX * spine.moveSpeed,
+                spine.directionY * spine.moveSpeed
+            );
+        }
+        
+        // 画面外に出たら削除
+        if (spine.x < -50 || spine.x > config.width + 50 || 
+            spine.y < -50 || spine.y > config.height + 50) {
+            spine.destroy();
+        }
+        
+        // 寿命を減らす
+        if (spine.lifeTime) {
+            spine.lifeTime -= dt;
+            if (spine.lifeTime <= 0) {
+                spine.destroy();
+            }
+        }
+    });
+    
+    // 追加の棘グラフィックスを更新（物理ボディがないので手動で移動）
+    spineGraphicsArray.forEach(graphics => {
+        if (graphics && graphics.active) {
+            graphics.x += graphics.spineVelocityX * dt;
+            graphics.y += graphics.spineVelocityY * dt;
+        }
+    });
 }
