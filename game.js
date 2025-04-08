@@ -53,8 +53,26 @@ let symbols = [];
 let expOrbs = [];
 let playerInvincible = 0;
 
+// 背景関連の変数
+let backgrounds = [];
+let backgroundSpeed = 0.5;
+
+// 音楽関連の変数
+let music;
+let musicTracks = [];
+
 function preload() {
     this.load.image('player', 'assets/images/player.png');
+
+    // 背景画像の読み込み
+    for (let i = 1; i <= 6; i++) {
+        this.load.image(`background${i}`, `assets/images/songCoverImage/Song Cover Image ${i}.jpg`);
+    }
+
+    // 音楽ファイルの読み込み
+    this.load.audio('music1', 'assets/audio/Cacti Dreams.mp3');
+    this.load.audio('music2', 'assets/audio/Desert Mirage.mp3');
+    this.load.audio('music3', 'assets/audio/Peyote Nights.mp3');
 
     this.load.spritesheet('enemy_walk', 'assets/images/lpc_teen_animations_2025-04-08T05-06-21/standard/walk.png', {
         frameWidth: 64,
@@ -76,10 +94,15 @@ function preload() {
         frameWidth: 64,
         frameHeight: 64
     });
-
 }
 
 function create() {
+    // 背景の作成
+    createBackground(this);
+
+    // 音楽の設定
+    setupMusic(this);
+
     player = this.physics.add.sprite(config.width / 2, config.height / 2, 'player');
     player.setScale(0.3);
     player.setDepth(10);
@@ -186,6 +209,57 @@ function create() {
     updateExpBar();
 }
 
+// 背景の作成
+function createBackground(scene) {
+    // 背景画像をランダムに選択
+    const bgIndex = Math.floor(Math.random() * 6) + 1;
+    
+    // 大きめに背景を2枚生成 (交互に移動して無限スクロール効果)
+    for (let i = 0; i < 2; i++) {
+        const bg = scene.add.image(config.width / 2, config.height / 2 + i * config.height, `background${bgIndex}`);
+        bg.setDepth(0); // 最背面に配置
+        
+        // 画像を画面全体に合わせて拡大
+        const scaleX = config.width / bg.width * 1.2; // 少し大きめに
+        const scaleY = config.height / bg.height * 1.2;
+        bg.setScale(Math.max(scaleX, scaleY));
+        
+        backgrounds.push(bg);
+    }
+}
+
+// 音楽の設定
+function setupMusic(scene) {
+    musicTracks = [
+        scene.sound.add('music1'),
+        scene.sound.add('music2'),
+        scene.sound.add('music3')
+    ];
+    
+    // ランダムな曲を選択して再生
+    playRandomMusic();
+    
+    // 曲が終わったら次の曲を再生
+    musicTracks.forEach(track => {
+        track.once('complete', playRandomMusic);
+    });
+}
+
+// ランダムな曲を再生
+function playRandomMusic() {
+    // 前の曲が再生中なら停止
+    if (music && music.isPlaying) {
+        music.stop();
+    }
+    
+    // ランダムに曲を選んで再生
+    const index = Math.floor(Math.random() * musicTracks.length);
+    music = musicTracks[index];
+    music.play({
+        volume: 0.5
+    });
+}
+
 function update(time, delta) {
     const dt = delta / 1000;
 
@@ -196,6 +270,9 @@ function update(time, delta) {
         updateLevelText();
         
         updatePlayerMovement();
+        
+        // 背景のスクロール更新
+        updateBackground(dt);
         
         // ゲームクリア条件をチェック
         checkGameClear.call(this);
@@ -215,6 +292,32 @@ function update(time, delta) {
 
     player.x = Phaser.Math.Clamp(player.x, 0, config.width);
     player.y = Phaser.Math.Clamp(player.y, 0, config.height);
+}
+
+// 背景のスクロール更新
+function updateBackground(dt) {
+    // プレイヤーの移動方向に合わせて背景をスクロール
+    const vx = player.body.velocity.x;
+    const vy = player.body.velocity.y;
+    
+    for (const bg of backgrounds) {
+        // プレイヤーの移動と逆方向に背景を動かして移動感を出す
+        bg.x -= (vx * dt * backgroundSpeed * 0.05);
+        bg.y -= (vy * dt * backgroundSpeed * 0.05);
+        
+        // 背景の端が表示されないように位置を調整
+        if (bg.y < -config.height / 2) {
+            bg.y += config.height * 2;
+        } else if (bg.y > config.height * 1.5) {
+            bg.y -= config.height * 2;
+        }
+        
+        if (bg.x < -config.width / 2) {
+            bg.x += config.width * 2;
+        } else if (bg.x > config.width * 1.5) {
+            bg.x -= config.width * 2;
+        }
+    }
 }
 
 function createUI(scene) {
