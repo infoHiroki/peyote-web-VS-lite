@@ -55,9 +55,9 @@ let playerInvincible = 0;
 
 // 背景関連の変数
 let backgrounds = [];
-let backgroundSpeed = 0.2; // ゆっくりと一定速度で動くように変更
-let backgroundAngle = 0; // 背景の移動角度
-let backgroundRotateSpeed = 0.0005; // 背景回転速度
+let backgroundSpeed = 0.05; // 非常にゆっくり動くように調整
+let backgroundVelocityX = -1; // 背景の移動方向（負の値で左方向）
+let backgroundVelocityY = -0.5; // 背景の移動方向（負の値で上方向）
 
 // 音楽関連の変数
 let music;
@@ -210,16 +210,16 @@ function create() {
     updateExpBar();
 }
 
-// 背景の作成 - 画面端に画像を配置
+// 背景の作成 - 画面端に画像を配置し、大きく表示
 function createBackground(scene) {
     try {
         // 背景画像を作成
         const bg = scene.add.image(0, 0, 'background');
         bg.setDepth(0); // 最背面に配置
         
-        // 画像を画面全体よりも大きめに設定（ただし左上を原点として配置）
-        const scaleX = (config.width / bg.width) * 1.5; // 画面の1.5倍の大きさ
-        const scaleY = (config.height / bg.height) * 1.5;
+        // 画像を画面全体よりもかなり大きめに設定
+        const scaleX = (config.width / bg.width) * 3.0; // 画面の3.0倍の大きさ
+        const scaleY = (config.height / bg.height) * 3.0;
         bg.setScale(scaleX, scaleY);
         
         // 左上を原点として配置
@@ -310,20 +310,34 @@ function update(time, delta) {
     player.y = Phaser.Math.Clamp(player.y, 0, config.height);
 }
 
-// 背景のスクロール更新 - 非常にゆっくりと移動
+// 背景のスクロール更新 - 非常にゆっくりと移動し、端で跳ね返る
 function updateBackground(dt) {
     try {
         if (backgrounds.length === 0) return;
         
         const bg = backgrounds[0];
         
-        // 背景を非常にゆっくりと一定方向に動かす
-        bg.x -= 0.5 * dt; // 左方向にゆっくり移動
+        // 背景を非常にゆっくりと移動（dt値で調整された一定の速度）
+        bg.x += backgroundVelocityX * backgroundSpeed * dt;
+        bg.y += backgroundVelocityY * backgroundSpeed * dt;
         
-        // 左に少しだけ移動したら、元の位置に戻す
-        if (bg.x < -10) {
-            bg.x = 0;
+        // 背景画像のサイズを取得
+        const bgWidth = bg.width * bg.scaleX;
+        const bgHeight = bg.height * bg.scaleY;
+        
+        // 左端または右端に到達したら跳ね返る
+        if (bg.x <= -(bgWidth - config.width) || bg.x >= 0) {
+            backgroundVelocityX *= -1; // 方向を反転
         }
+        
+        // 上端または下端に到達したら跳ね返る
+        if (bg.y <= -(bgHeight - config.height) || bg.y >= 0) {
+            backgroundVelocityY *= -1; // 方向を反転
+        }
+        
+        // 位置の制限（万が一範囲外になった場合の保険）
+        bg.x = Phaser.Math.Clamp(bg.x, -(bgWidth - config.width), 0);
+        bg.y = Phaser.Math.Clamp(bg.y, -(bgHeight - config.height), 0);
     } catch (e) {
         console.error("背景更新エラー:", e);
     }
