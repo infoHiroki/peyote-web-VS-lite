@@ -734,41 +734,47 @@ function applyInfluenceToSymbol(symbol, scene) {
     if (symbol.transformationState === 3) return;
     if (symbol.invincibleTimer > 0) return;
 
-    symbol.transformationState++;
-    updateSymbolVisualEffects(symbol);
+    // 影響力を適用して変身メーターを増加
+    symbol.transformationMeter += influencePower;
+    
+    // 変身状態を更新
+    updateSymbolTransformationState(symbol);
 
+    // ノックバック処理
     const dx = symbol.x - player.x;
     const dy = symbol.y - player.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
     const nx = dx / dist;
     const ny = dy / dist;
 
-    if (symbol.transformationState === 1) {
-        symbol.setVelocity(nx * 50, ny * 50);
-        symbol.invincibleTimer = 1.0;
-    } else if (symbol.transformationState === 2) {
-        symbol.setVelocity(nx * 75, ny * 75);
-        symbol.invincibleTimer = 1.0;
-    } else if (symbol.transformationState === 3) {
-        symbol.setVelocity(0, 0);
-        symbol.invincibleTimer = 2;
-        onSymbolFullyTransformed(symbol, scene);
-    }
+    // 適切なノックバック速度を設定
+    symbol.setVelocity(nx * 100, ny * 100);
+    symbol.invincibleTimer = 1.0;
 }
 
 function updateSymbolTransformationState(symbol) {
     const oldState = symbol.transformationState;
+    
+    // 変身メーターに基づいて状態を更新
     if (symbol.transformationMeter >= 100) {
-        symbol.transformationState = 3;
+        symbol.transformationState = 3; // 完全変身
     } else if (symbol.transformationMeter >= 50) {
-        symbol.transformationState = 2;
+        symbol.transformationState = 2; // 第2段階
     } else if (symbol.transformationMeter >= 25) {
-        symbol.transformationState = 1;
+        symbol.transformationState = 1; // 第1段階
     } else {
-        symbol.transformationState = 0;
+        symbol.transformationState = 0; // 未変身
     }
+    
+    // 状態が変わった場合のみビジュアルエフェクトを更新
     if (oldState !== symbol.transformationState) {
+        console.log(`敵の変身状態が変化: ${oldState} -> ${symbol.transformationState}`); // デバッグ出力
         updateSymbolVisualEffects(symbol);
+        
+        // 第3段階に達したら特別な処理
+        if (symbol.transformationState === 3) {
+            onSymbolFullyTransformed(symbol, symbol.scene);
+        }
     }
 }
 
@@ -798,14 +804,33 @@ function updateSymbolVisualEffects(symbol) {
 }
 
 function onSymbolFullyTransformed(symbol, scene) {
+    // 変身完了した場合、動きを止める
     symbol.setVelocity(0, 0);
-
-    // パーティクル作成（省略可能）
-
-    addExperience(10); // 20から10に減少
-    score += 10; // 20から10に減少
+    
+    // パーティクルエフェクト（オプション）
+    try {
+        const particles = scene.add.particles(symbol.x, symbol.y, 'spark', {
+            speed: { min: 50, max: 100 },
+            scale: { start: 0.5, end: 0 },
+            lifespan: 800,
+            blendMode: 'ADD',
+            quantity: 20
+        });
+        
+        // パーティクルを一時的に表示して削除
+        scene.time.delayedCall(800, () => {
+            particles.destroy();
+        });
+    } catch (e) {
+        console.error("パーティクル作成エラー:", e);
+    }
+    
+    // 経験値とスコアを付与
+    addExperience(20);
+    score += 20;
     updateScoreText();
-
+    
+    // 一定時間後に敵を削除
     scene.time.delayedCall(2000, () => {
         const idx = symbols.indexOf(symbol);
         if (idx !== -1) symbols.splice(idx, 1);
@@ -975,7 +1000,6 @@ function updateSpineCooldown(dt) {
 
 // ペヨーテの棘を発射する関数
 function shootSpine(scene, targetX, targetY) {
-    // クールダウン中なら発射しない
     if (spineCooldown > 0) return;
     
     // クールダウンをリセット
@@ -1078,6 +1102,7 @@ function onSpineHitSymbol(spine, symbol) {
     
     // 敵の変身メーターを増加
     symbol.transformationMeter += spineDamage * influencePower;
+    console.log(`敵の変身メーター: ${symbol.transformationMeter}`); // デバッグ出力
     
     // 変身状態を更新
     updateSymbolTransformationState(symbol);
@@ -1117,37 +1142,53 @@ function onSpineHitSymbol(spine, symbol) {
 
 // 棘の更新処理
 function updateSpines(dt) {
-    // グループ内の棘を更新
-    spines.getChildren().forEach(spine => {
-        // 止まっていないか確認
-        if (spine.body && (Math.abs(spine.body.velocity.x) < 10 || Math.abs(spine.body.velocity.y) < 10)) {
-            // 速度を元に戻す
-            spine.body.setVelocity(
-                spine.directionX * spine.moveSpeed,
-                spine.directionY * spine.moveSpeed
+    // すべての棘を確認
+    for (let i = spines.length - 1; i >= 0; i--) {
+        const spine = spines[i];
+        
+        // 棘が存在しなくなった場合は配列から削除
+        if (!spine || !spine.active) {
+            spines.splice(i, 1);
+            continue;
+        }
+        
+        // 経過時間を更新
+        spine.lifeTime += dt;
+        
+        // 存続時間が経過したら削除
+        if (spine.lifeTime > spine.maxLifeTime) {
+            spine.destroy();
+            spines.splice(i, 1);
+            continue;
+        }
+        
+        // 速度が小さすぎる場合、元の速度の方向に再加速
+        const currentVelocity = Math.sqrt(
+            spine.body.velocity.x * spine.body.velocity.x + 
+            spine.body.velocity.y * spine.body.velocity.y
+        );
+        
+        if (currentVelocity < 50) { // 速度が50未満になったら
+            // 元の方向を取得
+            const normalizedVx = spine.originalVelocity.x / spine.originalSpeed;
+            const normalizedVy = spine.originalVelocity.y / spine.originalSpeed;
+            
+            // 元の方向に100の速さで再設定
+            spine.setVelocity(
+                normalizedVx * 100,
+                normalizedVy * 100
             );
         }
         
         // 画面外に出たら削除
-        if (spine.x < -50 || spine.x > config.width + 50 || 
-            spine.y < -50 || spine.y > config.height + 50) {
+        if (
+            spine.x < -50 || 
+            spine.x > config.width + 50 || 
+            spine.y < -50 || 
+            spine.y > config.height + 50
+        ) {
             spine.destroy();
+            spines.splice(i, 1);
         }
-        
-        // 寿命を減らす
-        if (spine.lifeTime) {
-            spine.lifeTime -= dt;
-            if (spine.lifeTime <= 0) {
-                spine.destroy();
-            }
-        }
-    });
-    
-    // 追加の棘グラフィックスを更新（物理ボディがないので手動で移動）
-    spineGraphicsArray.forEach(graphics => {
-        if (graphics && graphics.active) {
-            graphics.x += graphics.spineVelocityX * dt;
-            graphics.y += graphics.spineVelocityY * dt;
-        }
-    });
+    }
 }
