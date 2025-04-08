@@ -458,6 +458,7 @@ function checkLevelUp() {
     while (experience >= expToNextLevel) {
         experience -= expToNextLevel;
         level++;
+        if (level >= 10 && !gameClearTriggered) gameClear();
         expToNextLevel = calculateExpToNextLevel();
         onLevelUp();
     }
@@ -527,7 +528,3 @@ function gameClear() {
     const restartButton = scene.add.text(config.width / 2, config.height / 2 + 50, 'Restart', { fontSize: '24px', fill: '#ffffff', backgroundColor: '#333333', padding: { left: 20, right: 20, top: 10, bottom: 10 } }).setOrigin(0.5).setInteractive();
     restartButton.on('pointerdown', () => window.location.reload());
 }
-
-setTimeout(() => {
-    if (!gameClearTriggered) gameClear();
-}, 15 * 60 * 1000);
