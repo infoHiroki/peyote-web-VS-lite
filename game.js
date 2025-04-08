@@ -114,8 +114,10 @@ function create() {
     // 当たり判定を小さくする - 半径を20に変更（以前は38）
     player.body.setCircle(20, -20 + player.width / 2, -20 + player.height / 2);
 
+    // 注意：スプライトシートの実際の並びに合わせてアニメーションを定義
+    // ※1段目（0-7）は上向き、4段目（24-31）は下向き
     this.anims.create({
-        key: 'enemy_walk_down',
+        key: 'enemy_walk_up',
         frames: this.anims.generateFrameNumbers('enemy_walk', { start: 0, end: 7 }),
         frameRate: 10,
         repeat: -1
@@ -133,7 +135,7 @@ function create() {
         repeat: -1
     });
     this.anims.create({
-        key: 'enemy_walk_up',
+        key: 'enemy_walk_down',
         frames: this.anims.generateFrameNumbers('enemy_walk', { start: 24, end: 31 }),
         frameRate: 10,
         repeat: -1
@@ -409,35 +411,41 @@ function checkGameClear() {
                     repeat: -1
                 });
                 
-                // 光の粒子エフェクト
-                const particles = scene.add.particles('player');
-                particles.setDepth(15);
-                
-                const emitter = particles.createEmitter({
-                    lifespan: 2000,
-                    speed: { min: 50, max: 100 },
-                    scale: { start: 0.1, end: 0 },
-                    alpha: { start: 1, end: 0 },
-                    rotate: { min: 0, max: 360 },
-                    tint: [0xffff00, 0xff00ff, 0x00ffff, 0x88ff88],
-                    frequency: 50,
-                    blendMode: 'ADD'
-                });
-                
-                emitter.startFollow(player);
+                // 光の輝きエフェクト（Phaser 3.60以降対応）
+                try {
+                    // 単純な光るエフェクト
+                    const glowCircle = scene.add.circle(player.x, player.y, 30, 0xffff00, 0.3);
+                    glowCircle.setDepth(player.depth - 1);
+                    
+                    // 輝きアニメーション
+                    scene.tweens.add({
+                        targets: glowCircle,
+                        scale: 1.5,
+                        alpha: 0.1,
+                        duration: 1000,
+                        yoyo: true,
+                        repeat: -1
+                    });
+                    
+                    // プレイヤーに追従
+                    scene.time.addEvent({
+                        delay: 16,
+                        callback: () => {
+                            glowCircle.x = player.x;
+                            glowCircle.y = player.y;
+                        },
+                        loop: true
+                    });
+                } catch (e) {
+                    console.error("エフェクト作成エラー:", e);
+                }
                 
                 // クリア報酬の表示
                 displayClearRewards(scene, centerX, centerY);
                 
-                // プレイヤーをタップ可能にする（リスタート用）
-                player.removeInteractive(); // 一度削除してから再設定
-                player.setInteractive({ useHandCursor: true, pixelPerfect: false });
-                player.input.hitArea.setTo(-50, -50, 100, 100); // ヒットエリアを広く
-                
-                // タップ/クリック時のリスタート機能（イベントリスナーを再設定）
-                player.off('pointerdown'); // 既存のイベントリスナーを削除
-                player.on('pointerdown', function() {
-                    console.log('タップされました！リトライします...');
+                // 画面全体をタップ可能に（リトライ用）
+                scene.input.on('pointerdown', function() {
+                    console.log('画面タップでリトライします...');
                     
                     // タップした時の視覚的なフィードバック
                     scene.cameras.main.flash(500, 255, 255, 255);
@@ -449,10 +457,10 @@ function checkGameClear() {
                     });
                 });
                 
-                // タップを促すテキストを表示（よりはっきりと）
-                const tapText = scene.add.text(centerX, centerY + 300, 'キャラクターをタップしてリトライ！', {
+                // タップを促すテキストを表示
+                const tapText = scene.add.text(centerX, centerY + 300, '画面をタップしてリトライ！', {
                     fontFamily: 'Arial',
-                    fontSize: 24, // サイズを大きく
+                    fontSize: 24,
                     color: '#ffffff',
                     stroke: '#000000',
                     strokeThickness: 4,
@@ -460,13 +468,7 @@ function checkGameClear() {
                     padding: { left: 10, right: 10, top: 5, bottom: 5 }
                 }).setOrigin(0.5);
                 
-                // テキストもタップ可能に
-                tapText.setInteractive({ useHandCursor: true });
-                tapText.on('pointerdown', function() {
-                    window.location.reload();
-                });
-                
-                // 点滅アニメーション（より目立つように）
+                // 点滅アニメーション
                 scene.tweens.add({
                     targets: tapText,
                     alpha: 0.6,
