@@ -188,11 +188,19 @@ function create() {
 
     joystick = this.rexVirtualJoystick.add(this, {
         x: config.width / 2,
-        y: config.height - 80,
-        radius: 40,
-        base: this.add.circle(0, 0, 40, 0x888888, 0.5),
-        thumb: this.add.circle(0, 0, 20, 0xcccccc, 0.8),
-    }).on('update', () => {});
+        y: config.height - 100,
+        radius: 50,
+        base: this.add.circle(0, 0, 50, 0x888888, 0.7),
+        thumb: this.add.circle(0, 0, 25, 0xcccccc, 0.9),
+        enable: true,
+        dir: '8dir',
+        forceMin: 0,
+        fixed: true,
+        distanceMin: 10,
+        distanceMax: 50
+    }).on('update', () => {
+        console.log(`Force: ${joystick.force}, Angle: ${joystick.angle}`);
+    });
 
     // ユーザーのジェスチャーでオーディオコンテキストを再開
     this.sound.pauseOnBlur = false;
@@ -213,17 +221,11 @@ function update(time, delta) {
         updateTimeText();
         updateScoreText();
         updateLevelText();
-
-        // デバッグログの出力を1秒に1回に制限（パフォーマンス向上のため）
-        if (Math.floor(time / 1000) !== Math.floor((time - delta) / 1000)) {
-            console.log(`Joystick - Angle: ${joystick.angle.toFixed(2)}, Force: ${joystick.force.toFixed(2)}`);
-        }
         
-        // 移動ロジックをシンプルに
-        if (joystick.force > 0.2) { // デッドゾーン設定
+        if (joystick && joystick.force > 0) {
+            const speed = 30;
             const angle = joystick.angle;
-            const force = Math.min(1.0, joystick.force);
-            const speed = 40; // さらに速度を下げる
+            const force = Math.min(1, joystick.force);
             
             const vx = Math.cos(angle) * force * speed;
             const vy = Math.sin(angle) * force * speed;
