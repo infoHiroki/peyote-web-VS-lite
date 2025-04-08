@@ -21,6 +21,15 @@ const config = {
         preload,
         create,
         update
+    },
+    plugins: {
+        scene: [
+            {
+                key: 'rexVirtualJoystick',
+                plugin: rexvirtualjoystickplugin,
+                mapping: 'rexVirtualJoystick'
+            }
+        ]
     }
 };
 
@@ -176,6 +185,15 @@ function create() {
     experience = 0;
     expToNextLevel = calculateExpToNextLevel();
     updateExpBar();
+
+    joystick = this.rexVirtualJoystick.add(this, {
+        x: 80,
+        y: config.height - 80,
+        radius: 40,
+        base: this.add.circle(0, 0, 40, 0x888888, 0.5),
+        thumb: this.add.circle(0, 0, 20, 0xcccccc, 0.8),
+    }).on('update', () => {});
+
 }
 
 function update(time, delta) {
@@ -186,11 +204,20 @@ function update(time, delta) {
         updateTimeText();
         updateScoreText();
         updateLevelText();
+
+        const force = joystick.force;
+        if (force > 0) {
+            const angle = joystick.angle;
+            const vx = Math.cos(angle) * force * 200;
+            const vy = Math.sin(angle) * force * 200;
+            player.setVelocity(vx, vy);
+        } else {
+            player.setVelocity(0, 0);
+        }
     }
 
     if (playerInvincible > 0) playerInvincible -= dt;
 
-    updatePlayerMovement();
     updateSymbols(dt);
     updateExpOrbs(dt);
 
