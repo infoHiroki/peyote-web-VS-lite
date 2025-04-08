@@ -156,9 +156,11 @@ function create() {
     cursors = this.input.keyboard.createCursorKeys();
 
     targetPosition = new Phaser.Math.Vector2(config.width / 2, config.height / 2);
-    this.input.on('pointerdown', (pointer) => {
-        targetPosition.x = pointer.x;
-        targetPosition.y = pointer.y;
+    this.input.on('pointermove', (pointer) => {
+        if (pointer.isDown) {
+            targetPosition.x = pointer.x;
+            targetPosition.y = pointer.y;
+        }
     });
 
     createUI(this);
@@ -186,22 +188,6 @@ function create() {
     expToNextLevel = calculateExpToNextLevel();
     updateExpBar();
 
-    joystick = this.rexVirtualJoystick.add(this, {
-        x: config.width / 2,
-        y: config.height - 100,
-        radius: 50,
-        base: this.add.circle(0, 0, 50, 0x888888, 0.7),
-        thumb: this.add.circle(0, 0, 25, 0xcccccc, 0.9),
-        enable: true,
-        dir: '8dir',
-        forceMin: 0,
-        fixed: true,
-        distanceMin: 10,
-        distanceMax: 50
-    }).on('update', () => {
-        console.log(`Force: ${joystick.force}, Angle: ${joystick.angle}`);
-    });
-
     // ユーザーのジェスチャーでオーディオコンテキストを再開
     this.sound.pauseOnBlur = false;
     
@@ -222,17 +208,15 @@ function update(time, delta) {
         updateScoreText();
         updateLevelText();
         
-        if (joystick && joystick.force > 0) {
-            const speed = 30;
-            const angle = joystick.angle;
-            const force = Math.min(1, joystick.force);
-            
-            const vx = Math.cos(angle) * force * speed;
-            const vy = Math.sin(angle) * force * speed;
-            
-            player.setVelocity(vx, vy);
-        } else {
+        const dx = targetPosition.x - player.x;
+        const dy = targetPosition.y - player.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        if (dist < 5) {
             player.setVelocity(0, 0);
+        } else {
+            const speed = 50;
+            player.setVelocity((dx / dist) * speed, (dy / dist) * speed);
         }
     }
 
