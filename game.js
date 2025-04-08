@@ -48,7 +48,7 @@ let influenceCircle;
 let influenceCooldown = 0;
 let influenceMaxCooldown = 1;
 let influencePower = 10;
-let influenceRadius = 80;
+let influenceRadius = 120;
 let symbols = [];
 let expOrbs = [];
 let playerInvincible = 0;
