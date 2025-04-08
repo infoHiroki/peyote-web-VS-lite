@@ -459,7 +459,7 @@ function createExperienceOrb(x, y, value) {
 
 function onPlayerHitSymbol(player, symbol) {
     if (symbol.transformationState < 3) {
-        takeDamage(2);
+        takeDamage(5);
     }
 }
 
@@ -467,7 +467,7 @@ function takeDamage(amount) {
     if (playerInvincible > 0) return;
     health = Math.max(0, health - amount);
     updateHealthBar();
-    playerInvincible = 1.5;
+    playerInvincible = 0.8;
     if (health <= 0) gameOver();
 }
 
