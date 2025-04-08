@@ -194,6 +194,15 @@ function create() {
         thumb: this.add.circle(0, 0, 20, 0xcccccc, 0.8),
     }).on('update', () => {});
 
+    // ユーザーのジェスチャーでオーディオコンテキストを再開
+    this.sound.pauseOnBlur = false;
+    
+    // 画面タップでオーディオを有効化
+    this.input.once('pointerdown', () => {
+        if (this.sound.context.state === 'suspended') {
+            this.sound.context.resume();
+        }
+    });
 }
 
 function update(time, delta) {
