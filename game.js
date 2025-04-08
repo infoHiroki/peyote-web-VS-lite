@@ -55,7 +55,7 @@ let playerInvincible = 0;
 
 // 背景関連の変数
 let backgrounds = [];
-let backgroundSpeed = 0.05; // 非常にゆっくり動くように調整
+let backgroundSpeed = 0.2; // 速度を上げて動きを分かりやすく
 let backgroundVelocityX = -1; // 背景の移動方向（負の値で左方向）
 let backgroundVelocityY = -0.5; // 背景の移動方向（負の値で上方向）
 
