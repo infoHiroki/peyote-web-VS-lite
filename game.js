@@ -48,7 +48,7 @@ let influenceCircle;
 let influenceCooldown = 0;
 let influenceMaxCooldown = 1;
 let influencePower = 10;
-let influenceRadius = 100;
+let influenceRadius = 80;
 let symbols = [];
 let expOrbs = [];
 let playerInvincible = 0;
@@ -156,7 +156,20 @@ function create() {
 
     this.time.addEvent({
         delay: 2000,
-        callback: () => spawnSymbol(this),
+        callback: () => {
+            let spawnCount = 1;
+            
+            if (level >= 2) spawnCount = 2;
+            if (level >= 4) spawnCount = 3;
+            if (level >= 6) spawnCount = 4;
+            if (level >= 8) spawnCount = 5;
+            
+            spawnCount = Math.min(spawnCount, 5);
+            
+            for(let i = 0; i < spawnCount; i++) {
+                spawnSymbol(this);
+            }
+        },
         callbackScope: this,
         loop: true
     });
@@ -417,10 +430,10 @@ function updateSymbolVisualEffects(symbol) {
 function onSymbolFullyTransformed(symbol, scene) {
     symbol.setVelocity(0, 0);
 
-    // パーティクル削除済み
+    // パーティクル作成（省略可能）
 
-    addExperience(10);
-    score += 10;
+    addExperience(20); // 10から20に増加
+    score += 20; // 10から20に増加
     updateScoreText();
 
     scene.time.delayedCall(2000, () => {
@@ -471,12 +484,16 @@ function onLevelUp() {
 
 function upgradeInfluence() {
     const t = Math.floor(Math.random() * 3);
-    if (t === 0) influencePower += 5;
-    else if (t === 1) {
-        influenceRadius += 10;
+    if (t === 0) {
+        // 影響力の強さを大幅に増加
+        influencePower += 10;
+    } else if (t === 1) {
+        // 影響範囲を大幅に拡大
+        influenceRadius += 25; // 10から25に増加
         influenceCircle.setRadius(influenceRadius);
     } else if (t === 2) {
-        influenceMaxCooldown = Math.max(0.5, influenceMaxCooldown - 0.1);
+        // クールダウンをより効果的に減少
+        influenceMaxCooldown = Math.max(0.3, influenceMaxCooldown - 0.15);
     }
 }
 
@@ -504,7 +521,8 @@ function updateTimeText() {
 }
 
 function calculateExpToNextLevel() {
-    return 20 + (level - 1) * 20;
+    // レベルアップに必要な経験値を少なくする
+    return 15 + (level - 1) * 15;
 }
 
 let gameClearTriggered = false;
